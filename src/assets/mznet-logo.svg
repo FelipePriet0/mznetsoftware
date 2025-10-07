@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="48" viewBox="0 0 160 48" role="img" aria-label="Logo Mznet">
+  <defs>
+    <linearGradient id="mz" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7b2cbf"/>
+      <stop offset="100%" stop-color="#ff7b00"/>
+    </linearGradient>
+  </defs>
+  <rect rx="8" ry="8" width="160" height="48" fill="url(#mz)"/>
+  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Inter, system-ui, Arial" font-size="20" fill="#ffffff" font-weight="700">MZNET</text>
+</svg>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="48" viewBox="0 0 160 48" role="img" aria-label="Logo WBR">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b3b8f"/>
+      <stop offset="100%" stop-color="#16b5a3"/>
+    </linearGradient>
+  </defs>
+  <rect rx="8" ry="8" width="160" height="48" fill="url(#g)"/>
+  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Inter, system-ui, Arial" font-size="22" fill="#ffffff" font-weight="700">WBR</text>
+</svg>

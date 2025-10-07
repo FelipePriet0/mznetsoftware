@@ -1,0 +1,60 @@
+﻿* text=auto
+
+# --- Código/Config (LF) ---
+*.ts      text eol=lf
+*.tsx     text eol=lf
+*.js      text eol=lf
+*.jsx     text eol=lf
+*.mjs     text eol=lf
+*.cjs     text eol=lf
+*.json    text eol=lf
+*.jsonc   text eol=lf
+*.tsbuildinfo text eol=lf
+
+# Estilos/markup/docs (LF)
+*.css     text eol=lf
+*.scss    text eol=lf
+*.sass    text eol=lf
+*.less    text eol=lf
+*.html    text eol=lf
+*.md      text eol=lf
+*.mdx     text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.svg     text eol=lf
+
+# Supabase/SQL (LF)
+*.sql     text eol=lf
+
+# Env de exemplo (LF)
+.env.example text eol=lf
+
+# Scripts Unix (LF)
+*.sh      text eol=lf
+
+# Scripts Windows (CRLF)
+*.bat     text eol=crlf
+*.cmd     text eol=crlf
+*.ps1     text eol=crlf
+
+# Locks e binários
+bun.lockb           binary
+package-lock.json   text eol=lf
+pnpm-lock.yaml      text eol=lf
+yarn.lock           text eol=lf
+
+# Imagens e fontes (binário)
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.gif   binary
+*.ico   binary
+*.bmp   binary
+*.tiff  binary
+*.ttf   binary
+*.otf   binary
+*.woff  binary
+*.woff2 binary
+*.pdf   binary
+*.zip   binary

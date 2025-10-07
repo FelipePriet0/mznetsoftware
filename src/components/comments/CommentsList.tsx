@@ -12,6 +12,7 @@ import { useAttachments } from '@/hooks/useAttachments';
 import { cn } from '@/lib/utils';
 import { CommentContentRenderer } from './CommentContentRenderer';
 import { AddTaskModal } from '@/components/tasks/AddTaskModal';
+import { useTasks } from '@/hooks/useTasks';
 
 export interface CommentsListProps {
   cardId: string;
@@ -23,6 +24,7 @@ export interface CommentsListProps {
   onReply: (parentId: string, content: string, attachments?: string[]) => Promise<Comment | null> | void;
   onEdit?: (commentId: string, content: string) => void;
   onDelete?: (commentId: string) => void;
+  onEditTask?: (task: any) => void; // Callback para editar tarefa
   onRefetch?: () => void;
   // Removido sistema de empresas - todos podem acessar anexos
 }
@@ -37,6 +39,7 @@ export function CommentsList({
   onReply,
   onEdit,
   onDelete,
+  onEditTask,
   onRefetch
 }: CommentsListProps) {
   const [newComment, setNewComment] = useState('');
@@ -48,6 +51,33 @@ export function CommentsList({
   const [pendingReplyAttachments, setPendingReplyAttachments] = useState<any[]>([]);
   const [showReplyTaskModal, setShowReplyTaskModal] = useState(false);
   const [taskParentCommentId, setTaskParentCommentId] = useState<string | null>(null);
+  
+  // Estados para edição de tarefa
+  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<any | null>(null);
+
+  // Carregar tarefas UMA VEZ para TODOS os comentários (otimização crítica!)
+  const { tasks, updateTaskStatus, loadTasks } = useTasks(undefined, cardId);
+  console.log('📋 [CommentsList] Tarefas carregadas centralizadamente:', tasks.length);
+  
+  // Debug: Mostrar quando as tarefas mudam
+  useEffect(() => {
+    console.log('🔄 [CommentsList] Lista de tarefas atualizada:', tasks);
+  }, [tasks]);
+
+  // Função para lidar com edição de tarefa
+  const handleEditTask = (task: any) => {
+    console.log('✏️ handleEditTask - Dados da tarefa recebidos:', task);
+    setEditingTask(task);
+    setShowEditTaskModal(true);
+  };
+
+  // Função para fechar modal de edição
+  const handleCloseEditTaskModal = () => {
+    setShowEditTaskModal(false);
+    setEditingTask(null);
+    // Não precisa recarregar aqui - o onTaskUpdate já faz isso
+  };
 
   // Hook para gerenciar anexos do comentário principal
   const {
@@ -453,6 +483,9 @@ export function CommentsList({
                           onDeleteAttachment={handleDeleteAttachment}
                           cardId={cardId}
                           commentId={comment.id}
+                          onEditTask={handleEditTask}
+                          tasks={tasks}
+                          onUpdateTaskStatus={updateTaskStatus}
                         />
                       </div>
                     </div>
@@ -645,12 +678,34 @@ export function CommentsList({
           // Criar resposta na conversa encadeada
           if (taskParentCommentId && onReply) {
             const result = await onReply(taskParentCommentId, content);
-            return result;
+            return result || null;
           }
           return null;
         }}
       />
 
+      {/* Modal de Editar Tarefa */}
+      <AddTaskModal
+        open={showEditTaskModal}
+        onClose={handleCloseEditTaskModal}
+        cardId={cardId}
+        editingTask={editingTask}
+        onTaskUpdate={async (taskId: string, updates: any) => {
+          // Recarregar tarefas E comentários para refletir mudanças
+          console.log('🔄 [CommentsList] Recarregando tarefas e comentários após atualização...');
+          
+          // 1. Recarregar tarefas (para atualizar os cards de tarefa)
+          await loadTasks();
+          console.log('✅ [CommentsList] Tarefas recarregadas');
+          
+          // 2. Recarregar comentários (para atualizar conversas)
+          if (onRefetch) {
+            onRefetch();
+          }
+          console.log('✅ [CommentsList] Comentários recarregados - PROCESSO COMPLETO! 🎉');
+          return true;
+        }}
+      />
     </div>
   );
 }

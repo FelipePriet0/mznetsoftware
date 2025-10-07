@@ -78,25 +78,42 @@ export default function Tarefas() {
   const handleOpenCard = async (cardId: string) => {
     setIsLoadingCard(true);
     try {
-      // Buscar dados do card na kanban_cards (que tem RLS liberado)
-      const { data: cardData, error } = await (supabase as any)
+      // Buscar dados frescos do banco (mesmo jeito que KanbanBoard faz)
+      const { data: freshCard, error } = await (supabase as any)
         .from('kanban_cards')
         .select('*')
         .eq('id', cardId)
         .single();
 
       if (error) {
-        console.error('Erro ao buscar card:', error);
+        console.error('❌ Erro ao buscar card do banco:', error);
         throw error;
       }
 
-      console.log('Card carregado:', cardData);
+      console.log('✅ Card carregado:', freshCard);
 
-      // O ModalEditarFicha espera os dados direto do kanban_cards
-      setSelectedCardData(cardData);
+      // Mapear para o formato CardItem esperado pelo ModalEditarFicha
+      // (mesmo formato que o KanbanBoard usa)
+      const mappedCard = {
+        id: freshCard.id,
+        nome: freshCard.title,
+        telefone: freshCard.phone,
+        deadline: freshCard.deadline,
+        receivedAt: freshCard.received_at,
+        updatedAt: freshCard.updated_at,
+        status: freshCard.status,
+        columnId: freshCard.column_id,
+        parecer: freshCard.reanalysis_notes || freshCard.comments || freshCard.comments_short || '',
+        email: freshCard.email,
+        cpf: freshCard.cpf,
+        // Incluir TODOS os campos do kanban_cards
+        ...freshCard
+      };
+
+      setSelectedCardData(mappedCard);
       setSelectedCardId(cardId);
     } catch (error: any) {
-      console.error('Erro ao carregar card:', error);
+      console.error('❌ Erro ao carregar card:', error);
       toast({
         title: 'Erro',
         description: error?.message || 'Não foi possível abrir o card.',

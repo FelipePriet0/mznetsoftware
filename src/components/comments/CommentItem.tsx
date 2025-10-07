@@ -33,6 +33,9 @@ export interface CommentItemProps {
   onEdit?: (commentId: string, content: string) => void;
   onDelete?: (commentId: string) => void;
   onDownloadAttachment?: (filePath: string, fileName: string) => void;
+  onEditTask?: (task: any) => void; // Callback para editar tarefa
+  tasks?: any[]; // Tarefas carregadas no componente pai (otimização)
+  onUpdateTaskStatus?: (taskId: string, status: 'pending' | 'completed') => Promise<boolean>; // Callback para atualizar status
   currentUserId: string;
   currentUserName: string;
   canEdit?: boolean;
@@ -47,6 +50,9 @@ export function CommentItem({
   onEdit,
   onDelete,
   onDownloadAttachment,
+  onEditTask,
+  tasks,
+  onUpdateTaskStatus,
   currentUserId,
   currentUserName,
   canEdit = false,
@@ -194,6 +200,9 @@ export function CommentItem({
               onDeleteAttachment={handleDeleteAttachment}
               cardId={comment.cardId}
               commentId={comment.id}
+              onEditTask={onEditTask}
+              tasks={tasks}
+              onUpdateTaskStatus={onUpdateTaskStatus}
             />
           </div>
         </div>

@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { AttachmentCard } from './AttachmentCard';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { User, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { User, Calendar, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useTasks } from '@/hooks/useTasks';
 import { useToast } from '@/hooks/use-toast';
+import { Task } from '@/types/tasks';
 
 interface CommentContentRendererProps {
   content: string;
@@ -14,6 +16,9 @@ interface CommentContentRendererProps {
   onDeleteAttachment?: (attachmentId: string, filePath: string) => void;
   cardId?: string;
   commentId?: string;
+  onEditTask?: (task: any) => void; // Callback para editar tarefa
+  tasks?: Task[]; // Tarefas carregadas no componente pai (otimização)
+  onUpdateTaskStatus?: (taskId: string, status: 'pending' | 'completed') => Promise<boolean>; // Callback para atualizar status
   // Removido sistema de empresas - todos podem acessar anexos
 }
 
@@ -29,8 +34,17 @@ const ATTACHMENT_COMMENT_FLEXIBLE_REGEX = /📎 Anexo adicionado: (.+?)(?:\n|$)/
 // Regex para detectar comentários de tarefa
 const TASK_COMMENT_REGEX = /📋 \*\*Tarefa criada\*\*\n\n👤 \*\*Para:\*\* @(.+?)\n📝 \*\*Descrição:\*\* (.+?)(?:\n📅 \*\*Prazo:\*\* (.+?))?(?:\n|$)/s;
 
-export function CommentContentRenderer({ content, attachments, onDownloadAttachment, onDeleteAttachment, cardId, commentId }: CommentContentRendererProps) {
-  const { tasks, updateTaskStatus } = useTasks(undefined, cardId);
+export function CommentContentRenderer({ 
+  content, 
+  attachments, 
+  onDownloadAttachment, 
+  onDeleteAttachment, 
+  cardId, 
+  commentId, 
+  onEditTask,
+  tasks = [], // Recebe tarefas como prop (otimização!)
+  onUpdateTaskStatus
+}: CommentContentRendererProps) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -42,23 +56,44 @@ export function CommentContentRenderer({ content, attachments, onDownloadAttachm
   // Verificar se é um comentário de TAREFA primeiro
   const taskMatch = content.match(TASK_COMMENT_REGEX);
   if (taskMatch) {
-    const [, assignedTo, description, deadline] = taskMatch;
+    const [, assignedToFromComment, descriptionFromComment, deadlineFromComment] = taskMatch;
     
     // Encontrar a tarefa relacionada
     const relatedTask = tasks.find(task => 
       task.comment_id === commentId || 
-      (task.card_id === cardId && task.description === description.trim())
+      (task.card_id === cardId && task.description === descriptionFromComment.trim())
     );
+    
+    // Usar dados atualizados da tarefa do banco, ou fallback para dados do comentário
+    const assignedTo = relatedTask?.assigned_to_name || assignedToFromComment;
+    const description = relatedTask?.description || descriptionFromComment;
+    const deadline = relatedTask?.deadline || deadlineFromComment;
     
     const isCompleted = relatedTask?.status === 'completed';
     
+    // Debug: mostrar dados da tarefa
+    console.log('📋 CommentContentRenderer - Dados da tarefa:', {
+      commentId,
+      relatedTask: relatedTask ? {
+        id: relatedTask.id,
+        description: relatedTask.description,
+        assigned_to_name: relatedTask.assigned_to_name,
+        deadline: relatedTask.deadline,
+        status: relatedTask.status
+      } : null,
+      assignedTo,
+      description,
+      deadline,
+      isCompleted
+    });
+    
     const handleToggleTask = async () => {
-      if (!relatedTask || isUpdating) return;
+      if (!relatedTask || isUpdating || !onUpdateTaskStatus) return;
       
       setIsUpdating(true);
       try {
         const newStatus = isCompleted ? 'pending' : 'completed';
-        await updateTaskStatus(relatedTask.id, newStatus);
+        await onUpdateTaskStatus(relatedTask.id, newStatus);
         
         toast({
           title: newStatus === 'completed' ? 'Tarefa concluída!' : 'Tarefa reaberta',
@@ -96,7 +131,7 @@ export function CommentContentRenderer({ content, attachments, onDownloadAttachm
           </div>
           
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center justify-between mb-2">
               <Badge className={cn(
                 isCompleted 
                   ? "bg-green-500 hover:bg-green-600" 
@@ -104,6 +139,32 @@ export function CommentContentRenderer({ content, attachments, onDownloadAttachm
               )}>
                 {isCompleted ? 'Tarefa Concluída' : 'Tarefa'}
               </Badge>
+              
+              {/* CTA de 3 pontinhos para editar */}
+              {relatedTask && onEditTask && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        console.log('🔧 Clicando em "Editar Tarefa" - relatedTask:', relatedTask);
+                        onEditTask(relatedTask);
+                      }}
+                      className="text-sm"
+                    >
+                      Editar Tarefa
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
             
             <div className={cn(

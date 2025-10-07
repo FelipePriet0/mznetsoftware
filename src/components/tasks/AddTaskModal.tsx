@@ -3,6 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/context/AuthContext';
 import { useTasks } from '@/hooks/useTasks';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +17,8 @@ interface AddTaskModalProps {
   cardId: string;
   onCommentCreate?: (content: string) => Promise<Comment | null>;
   parentCommentId?: string;
+  editingTask?: any | null; // Tarefa sendo editada (null = modo criação)
+  onTaskUpdate?: (taskId: string, updates: any) => Promise<boolean>;
 }
 
 interface User {
@@ -24,9 +27,9 @@ interface User {
   role: string;
 }
 
-export function AddTaskModal({ open, onClose, cardId, onCommentCreate, parentCommentId }: AddTaskModalProps) {
+export function AddTaskModal({ open, onClose, cardId, onCommentCreate, parentCommentId, editingTask, onTaskUpdate }: AddTaskModalProps) {
   const { profile } = useAuth();
-  const { createTask } = useTasks(undefined, cardId);
+  const { createTask, updateTask, loadTasks } = useTasks(undefined, cardId);
   const { toast } = useToast();
 
   const [assignedTo, setAssignedTo] = useState('');
@@ -36,6 +39,11 @@ export function AddTaskModal({ open, onClose, cardId, onCommentCreate, parentCom
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [currentUserName, setCurrentUserName] = useState<string>('');
+  
+  // Estados para detectar mudanças não salvas
+  const [originalValues, setOriginalValues] = useState({ assignedTo: '', description: '', deadline: '' });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Carregar usuário atual e lista de usuários
   useEffect(() => {
@@ -87,6 +95,71 @@ export function AddTaskModal({ open, onClose, cardId, onCommentCreate, parentCom
     loadData();
   }, [open, profile]);
 
+  // Preencher campos quando estiver editando (APENAS quando usuários já foram carregados)
+  useEffect(() => {
+    // Só preencher se os usuários já foram carregados
+    if (isLoadingUsers) {
+      console.log('⏳ Aguardando carregamento de usuários...');
+      return;
+    }
+
+    if (editingTask && open) {
+      console.log('📝 Preenchendo campos com dados da tarefa:', editingTask);
+      
+      const assignedToValue = editingTask.assigned_to || '';
+      const descriptionValue = editingTask.description || '';
+      const deadlineValue = editingTask.deadline ? editingTask.deadline.slice(0, 16) : '';
+      
+      console.log('📝 Valores que serão setados:', {
+        assignedTo: assignedToValue,
+        description: descriptionValue,
+        deadline: deadlineValue,
+        usersLoaded: users.length
+      });
+      
+      // Verificar se o usuário atribuído existe na lista
+      const userExists = users.some(u => u.id === assignedToValue);
+      if (assignedToValue && !userExists) {
+        console.warn('⚠️ Usuário atribuído não encontrado na lista:', assignedToValue);
+      }
+      
+      setAssignedTo(assignedToValue);
+      setDescription(descriptionValue);
+      setDeadline(deadlineValue);
+      
+      // Salvar valores originais para comparação
+      setOriginalValues({
+        assignedTo: assignedToValue,
+        description: descriptionValue,
+        deadline: deadlineValue
+      });
+    } else if (!editingTask && open) {
+      // Limpar campos quando não estiver editando (apenas criação)
+      console.log('📝 Limpando campos para criação de nova tarefa');
+      setAssignedTo('');
+      setDescription('');
+      setDeadline('');
+      
+      // Limpar valores originais
+      setOriginalValues({ assignedTo: '', description: '', deadline: '' });
+    }
+    
+    // Reset mudanças não salvas
+    setHasUnsavedChanges(false);
+  }, [editingTask, open, isLoadingUsers, users]);
+
+  // Detectar mudanças nos campos (apenas no modo de edição)
+  useEffect(() => {
+    if (editingTask && open) {
+      const hasChanges = 
+        assignedTo !== originalValues.assignedTo ||
+        description !== originalValues.description ||
+        deadline !== originalValues.deadline;
+      
+      setHasUnsavedChanges(hasChanges);
+    }
+  }, [assignedTo, description, deadline, originalValues, editingTask, open]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -101,51 +174,78 @@ export function AddTaskModal({ open, onClose, cardId, onCommentCreate, parentCom
 
     setIsSubmitting(true);
     try {
-      let commentId: string | undefined;
+      const isEditing = editingTask !== null;
 
-      // Primeiro, criar o comentário (conversa encadeada)
-      if (onCommentCreate) {
-        const assignedUser = users.find(u => u.id === assignedTo);
-        const deadlineText = deadline
-          ? `\n📅 Prazo: ${new Date(deadline).toLocaleString('pt-BR')}`
-          : '';
-
-        const commentContent = `📋 **Tarefa criada**\n\n` +
-          `👤 **Para:** @${assignedUser?.full_name}\n` +
-          `📝 **Descrição:** ${description.trim()}` +
-          deadlineText;
-
-        const comment = await onCommentCreate(commentContent);
-        if (comment) {
-          commentId = comment.id;
-        }
-      }
-
-      // Depois, criar a tarefa vinculada ao comentário
-      const task = await createTask({
-        card_id: cardId,
-        assigned_to: assignedTo,
-        description: description.trim(),
-        deadline: deadline || undefined,
-      }, commentId);
-
-      if (task) {
-        toast({
-          title: 'Tarefa criada com sucesso!',
-          description: `Tarefa atribuída para ${users.find(u => u.id === assignedTo)?.full_name}`,
+      if (isEditing && editingTask) {
+        // Modo de edição
+        const success = await updateTask(editingTask.id, {
+          assigned_to: assignedTo,
+          description: description.trim(),
+          deadline: deadline || undefined,
         });
 
-        // Limpar formulário e fechar
-        setAssignedTo('');
-        setDescription('');
-        setDeadline('');
-        onClose();
+        if (success) {
+          toast({
+            title: 'Tarefa atualizada com sucesso!',
+            description: `Tarefa atualizada para ${users.find(u => u.id === assignedTo)?.full_name}`,
+          });
+          
+          // Notificar o componente pai para recarregar (força atualização completa)
+          console.log('✨ [AddTaskModal] Notificando componente pai sobre atualização...');
+          if (onTaskUpdate) {
+            await onTaskUpdate(editingTask.id, {
+              assigned_to: assignedTo,
+              description: description.trim(),
+              deadline: deadline || undefined,
+            });
+          }
+          
+          handleCloseModal();
+        }
+      } else {
+        // Modo de criação
+        let commentId: string | undefined;
+
+        // Primeiro, criar o comentário (conversa encadeada)
+        if (onCommentCreate) {
+          const assignedUser = users.find(u => u.id === assignedTo);
+          const deadlineText = deadline
+            ? `\n📅 Prazo: ${new Date(deadline).toLocaleString('pt-BR')}`
+            : '';
+
+          const commentContent = `📋 **Tarefa criada**\n\n` +
+            `👤 **Para:** @${assignedUser?.full_name}\n` +
+            `📝 **Descrição:** ${description.trim()}` +
+            deadlineText;
+
+          const comment = await onCommentCreate(commentContent);
+          if (comment) {
+            commentId = comment.id;
+          }
+        }
+
+        // Depois, criar a tarefa vinculada ao comentário
+        const task = await createTask({
+          card_id: cardId,
+          assigned_to: assignedTo,
+          description: description.trim(),
+          deadline: deadline || undefined,
+        }, commentId);
+
+        if (task) {
+          toast({
+            title: 'Tarefa criada com sucesso!',
+            description: `Tarefa atribuída para ${users.find(u => u.id === assignedTo)?.full_name}`,
+          });
+          handleCloseModal();
+        }
       }
     } catch (error) {
-      console.error('Error creating task:', error);
+      console.error('Error submitting task:', error);
+      const isEditing = editingTask !== null;
       toast({
-        title: 'Erro ao criar tarefa',
-        description: 'Não foi possível criar a tarefa. Tente novamente.',
+        title: isEditing ? 'Erro ao atualizar tarefa' : 'Erro ao criar tarefa',
+        description: 'Não foi possível processar a tarefa. Tente novamente.',
         variant: 'destructive',
       });
     } finally {
@@ -154,14 +254,91 @@ export function AddTaskModal({ open, onClose, cardId, onCommentCreate, parentCom
   };
 
   const handleCancel = () => {
+    // Se há mudanças não salvas, mostrar diálogo de confirmação
+    if (hasUnsavedChanges && editingTask) {
+      setShowConfirmDialog(true);
+      return;
+    }
+    
+    // Caso contrário, fechar normalmente
+    handleCloseModal();
+  };
+
+  const handleCloseModal = () => {
     setAssignedTo('');
     setDescription('');
     setDeadline('');
+    setHasUnsavedChanges(false);
+    setShowConfirmDialog(false);
     onClose();
   };
 
+  const handleConfirmDiscard = () => {
+    setShowConfirmDialog(false);
+    handleCloseModal();
+  };
+
+  const handleConfirmSave = async () => {
+    setShowConfirmDialog(false);
+    
+    if (!editingTask) return;
+    
+    // Validar campos obrigatórios
+    if (!assignedTo || !description.trim()) {
+      toast({
+        title: 'Campos obrigatórios',
+        description: 'Preencha o colaborador e a descrição da tarefa',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Atualizar a tarefa diretamente
+      const success = await updateTask(editingTask.id, {
+        assigned_to: assignedTo,
+        description: description.trim(),
+        deadline: deadline || undefined,
+      });
+
+      if (success) {
+        toast({
+          title: 'Tarefa atualizada com sucesso!',
+          description: `Tarefa atualizada para ${users.find(u => u.id === assignedTo)?.full_name}`,
+        });
+        
+        // Notificar o componente pai para recarregar (força atualização completa)
+        console.log('✨ [AddTaskModal] Notificando componente pai sobre atualização via dialog...');
+        if (onTaskUpdate) {
+          await onTaskUpdate(editingTask.id, {
+            assigned_to: assignedTo,
+            description: description.trim(),
+            deadline: deadline || undefined,
+          });
+        }
+        
+        handleCloseModal();
+      }
+    } catch (error) {
+      console.error('Error updating task:', error);
+      toast({
+        title: 'Erro ao atualizar tarefa',
+        description: 'Não foi possível atualizar a tarefa. Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <Sheet open={open} onOpenChange={onClose}>
+    <Sheet open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        // Interceptar fechamento para verificar mudanças não salvas
+        handleCancel();
+      }
+    }}>
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-xl font-semibold">Adicionar Tarefa</SheetTitle>
@@ -247,7 +424,7 @@ export function AddTaskModal({ open, onClose, cardId, onCommentCreate, parentCom
               disabled={isSubmitting}
               className="flex-1 bg-gray-500 hover:bg-gray-600 text-white border-gray-500 hover:border-gray-600"
             >
-              Cancelar
+              {editingTask ? 'Descartar Alterações' : 'Cancelar'}
             </Button>
             <Button
               type="submit"
@@ -257,15 +434,41 @@ export function AddTaskModal({ open, onClose, cardId, onCommentCreate, parentCom
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Criando...
+                  {editingTask ? 'Salvando...' : 'Criando...'}
                 </>
               ) : (
-                'Criar Tarefa'
+                editingTask ? 'Salvar Alterações' : 'Criar Tarefa'
               )}
             </Button>
           </div>
         </form>
       </SheetContent>
+
+      {/* Diálogo de Confirmação para Mudanças Não Salvas */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Alterações não salvas</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você fez alterações na tarefa. Deseja salvar as alterações antes de sair?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={handleConfirmDiscard}
+              className="bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600"
+            >
+              Descartar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmSave} 
+              className="bg-[#018942] hover:bg-[#018942]/90 text-white"
+            >
+              Salvar e Sair
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }

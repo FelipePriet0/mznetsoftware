@@ -74,6 +74,8 @@ export function useTasks(userId?: string, cardId?: string) {
         assigned_to_name: task.assigned_to_profile?.full_name || 'Usuário',
       }));
 
+      console.log('📋 Tarefas carregadas do banco:', mappedTasks.length, 'tarefas');
+      console.log('📋 Dados das tarefas:', mappedTasks);
       setTasks(mappedTasks);
     } catch (err: any) {
       console.error('Error loading tasks:', err);
@@ -151,6 +153,8 @@ export function useTasks(userId?: string, cardId?: string) {
   // Atualizar status da tarefa
   const updateTaskStatus = async (taskId: string, status: 'pending' | 'completed'): Promise<boolean> => {
     try {
+      console.log('✅ [useTasks] Atualizando status da tarefa:', { taskId, status });
+      
       const updateData: any = {
         status,
         updated_at: new Date().toISOString()
@@ -162,19 +166,8 @@ export function useTasks(userId?: string, cardId?: string) {
         updateData.completed_at = null;
       }
 
-      const { error: updateError } = await (supabase as any)
-        .from('card_tasks')
-        .update(updateData)
-        .eq('id', taskId);
-
-      if (updateError) {
-        if (updateError.code === 'PGRST205' || updateError.message?.includes('relation "public.card_tasks" does not exist')) {
-          console.warn('Card tasks table not found - feature may not be available yet');
-          return false;
-        }
-        throw updateError;
-      }
-
+      // 1. Atualização otimista imediata (UI instantânea)
+      console.log('⚡ [useTasks] Atualizando checkbox otimisticamente...');
       setTasks(prev =>
         prev.map(task =>
           task.id === taskId
@@ -188,10 +181,130 @@ export function useTasks(userId?: string, cardId?: string) {
         )
       );
 
+      // 2. Salvar no banco de dados (sem bloquear a UI)
+      const { error: updateError } = await (supabase as any)
+        .from('card_tasks')
+        .update(updateData)
+        .eq('id', taskId);
+
+      if (updateError) {
+        console.error('❌ [useTasks] Erro ao atualizar status, revertendo...');
+        // Reverter mudança otimista em caso de erro
+        await loadTasks();
+        
+        if (updateError.code === 'PGRST205' || updateError.message?.includes('relation "public.card_tasks" does not exist')) {
+          console.warn('Card tasks table not found - feature may not be available yet');
+          return false;
+        }
+        throw updateError;
+      }
+
+      console.log('✅ [useTasks] Status atualizado no banco com sucesso');
       return true;
     } catch (err: any) {
-      console.error('Error updating task status:', err);
+      console.error('❌ [useTasks] Erro ao atualizar status da tarefa:', err);
       setError(err.message || 'Erro ao atualizar status da tarefa');
+      return false;
+    }
+  };
+
+  // Atualizar tarefa completa
+  const updateTask = async (taskId: string, updates: Partial<CreateTaskInput>): Promise<boolean> => {
+    try {
+      console.log('📝 [useTasks] Atualizando tarefa no banco...', { taskId, updates });
+      
+      const updateData = {
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+
+      // 1. Atualização otimista no estado local (UI instantânea)
+      console.log('⚡ [useTasks] Atualizando UI otimisticamente...');
+      setTasks(prevTasks => 
+        prevTasks.map(task => {
+          if (task.id === taskId) {
+            // Se mudou o assigned_to, buscar o nome do novo usuário
+            let updatedTask = { ...task, ...updateData };
+            
+            // Se mudou o assigned_to, precisamos atualizar o nome também
+            if (updates.assigned_to && updates.assigned_to !== task.assigned_to) {
+              // O nome será atualizado quando recarregar do banco
+              updatedTask.assigned_to_name = 'Carregando...';
+            }
+            
+            console.log('✨ [useTasks] Tarefa atualizada otimisticamente:', updatedTask);
+            return updatedTask;
+          }
+          return task;
+        })
+      );
+
+      // 2. Salvar no banco de dados
+      const { data: updatedData, error: updateError } = await (supabase as any)
+        .from('card_tasks')
+        .update(updateData)
+        .eq('id', taskId)
+        .select(`
+          id,
+          card_id,
+          card_title,
+          created_by,
+          assigned_to,
+          description,
+          status,
+          deadline,
+          comment_id,
+          created_at,
+          updated_at,
+          completed_at,
+          created_by_profile:profiles!card_tasks_created_by_fkey(full_name),
+          assigned_to_profile:profiles!card_tasks_assigned_to_fkey(full_name)
+        `)
+        .single();
+
+      if (updateError) {
+        console.error('❌ [useTasks] Erro ao atualizar tarefa:', updateError);
+        // Reverter atualização otimista em caso de erro
+        await loadTasks();
+        
+        if (updateError.code === 'PGRST205' || updateError.message?.includes('relation "public.card_tasks" does not exist')) {
+          console.warn('Card tasks table not found - feature may not be available yet');
+          return false;
+        }
+        throw updateError;
+      }
+
+      // 3. Sincronizar com dados reais do banco (incluindo nomes atualizados)
+      console.log('✅ [useTasks] Tarefa salva no banco, sincronizando dados completos...');
+      if (updatedData) {
+        const syncedTask: Task = {
+          id: updatedData.id,
+          card_id: updatedData.card_id,
+          card_title: updatedData.card_title,
+          created_by: updatedData.created_by,
+          assigned_to: updatedData.assigned_to,
+          description: updatedData.description,
+          status: updatedData.status,
+          deadline: updatedData.deadline,
+          comment_id: updatedData.comment_id,
+          created_at: updatedData.created_at,
+          updated_at: updatedData.updated_at,
+          completed_at: updatedData.completed_at,
+          created_by_name: updatedData.created_by_profile?.full_name || 'Usuário',
+          assigned_to_name: updatedData.assigned_to_profile?.full_name || 'Usuário',
+        };
+
+        setTasks(prevTasks => 
+          prevTasks.map(task => task.id === taskId ? syncedTask : task)
+        );
+        
+        console.log('✅ [useTasks] Tarefa sincronizada com dados do banco:', syncedTask);
+      }
+
+      return true;
+    } catch (err: any) {
+      console.error('❌ [useTasks] Erro ao atualizar tarefa:', err);
+      setError(err.message || 'Erro ao atualizar tarefa');
       return false;
     }
   };
@@ -217,7 +330,10 @@ export function useTasks(userId?: string, cardId?: string) {
 
   // Carregar tarefas quando userId ou cardId mudar
   useEffect(() => {
-    loadTasks();
+    if (userId || cardId) {
+      loadTasks();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, cardId]);
 
   return {
@@ -227,6 +343,7 @@ export function useTasks(userId?: string, cardId?: string) {
     loadTasks,
     createTask,
     updateTaskStatus,
+    updateTask,
     deleteTask,
   };
 }

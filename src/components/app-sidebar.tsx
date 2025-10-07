@@ -6,6 +6,7 @@ import {
   KanbanSquare,
   Route,
   User,
+  ListTodo,
   type LucideIcon,
 } from "lucide-react";
 
@@ -33,6 +34,7 @@ const sidebarDimensions: CSSProperties = {
 };
 
 const navigationItems: NavItem[] = [
+  { title: "Tarefas", url: "/tarefas", icon: ListTodo },
   { title: "Kanban", url: "/", icon: KanbanSquare, end: true },
   { title: "Agendamento", url: "/agendamento", icon: Route },
   { title: "Histórico", url: "/historico", icon: History },

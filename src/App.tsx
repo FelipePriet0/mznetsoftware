@@ -11,6 +11,7 @@ import RequireAuth from "@/routes/RequireAuth";
 import Index from "./pages/Index";
 import Agendamento from "./pages/Agendamento";
 import Historico from "./pages/Historico";
+import Tarefas from "./pages/Tarefas";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
@@ -54,6 +55,7 @@ const App = () => (
                 <Route element={<ProtectedLayout />}>
                   <Route path="/" element={<Index />} />
                   <Route path="/inicio" element={<Index />} />
+                  <Route path="/tarefas" element={<Tarefas />} />
                   <Route path="/agendamento" element={<Agendamento />} />
                   <Route path="/historico" element={<Historico />} />
                   <Route path="/dashboard/all" element={<Index />} />

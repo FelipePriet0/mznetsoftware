@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Paperclip } from 'lucide-react';
+import { Paperclip, ListTodo } from 'lucide-react';
 import { CommentsList } from '@/components/comments/CommentsList';
 import { useComments } from '@/hooks/useComments';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useAttachments } from '@/hooks/useAttachments';
 import { AttachmentUploadModal } from '@/components/attachments/AttachmentUploadModal';
 import { AttachmentList } from '@/components/attachments/AttachmentDisplay';
+import { AddTaskModal } from '@/components/tasks/AddTaskModal';
 
 interface ObservationsWithCommentsProps {
   name: string;
@@ -33,6 +34,7 @@ export function ObservationsWithComments({
   onRefetch
 }: ObservationsWithCommentsProps) {
   const [showComments] = useState(true); // Sempre mostrar comentários
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   
   const { name: currentUserName } = useCurrentUser();
   const { profile } = useAuth();
@@ -160,7 +162,7 @@ export function ObservationsWithComments({
               }
             }
           }}
-          className={`${className} pt-12 pl-12`}
+          className={`${className} pt-12 pl-4`}
           placeholder={hasCommentsError ? placeholder : "Use @ Menções para marcar Colaboradores"}
         />
         
@@ -178,6 +180,19 @@ export function ObservationsWithComments({
             Anexo
           </Button>
         )}
+
+        {/* CTA Adicionar Tarefa integrado no campo - linha 1 */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowAddTaskModal(true)}
+          className="absolute top-2 left-28 h-8 px-3 py-1 bg-[#018942] hover:bg-[#018942]/90 text-white hover:text-white rounded-md text-sm font-medium"
+          title="Adicionar tarefa"
+        >
+          <ListTodo className="h-4 w-4 mr-1" />
+          Adicionar Tarefa
+        </Button>
         
       </div>
 
@@ -206,6 +221,26 @@ export function ObservationsWithComments({
           />
         </div>
       )}
+
+      {/* Modal de Adicionar Tarefa */}
+      <AddTaskModal
+        open={showAddTaskModal}
+        onClose={() => setShowAddTaskModal(false)}
+        cardId={cardId}
+        onCommentCreate={async (content: string) => {
+          // Criar comentário como conversa encadeada
+          const result = await createComment({
+            cardId: cardId,
+            authorId: profile?.id || '',
+            authorName: currentUserName || profile?.full_name || 'Usuário',
+            authorRole: profile?.role || 'colaborador',
+            content: content,
+            level: 0,
+            threadId: `thread_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          });
+          return result;
+        }}
+      />
 
     </div>
   );

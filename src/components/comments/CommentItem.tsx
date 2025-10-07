@@ -192,6 +192,8 @@ export function CommentItem({
               attachments={attachments}
               onDownloadAttachment={onDownloadAttachment || handleDownloadAttachment}
               onDeleteAttachment={handleDeleteAttachment}
+              cardId={comment.cardId}
+              commentId={comment.id}
             />
           </div>
         </div>

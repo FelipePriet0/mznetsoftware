@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Paperclip, ArrowLeft, Trash2 } from 'lucide-react';
+import { Paperclip, ArrowLeft, Trash2, ListTodo } from 'lucide-react';
 import { format } from 'date-fns';
 import { CommentItem, Comment } from './CommentItem';
 import { AttachmentList } from '@/components/attachments/AttachmentDisplay';
@@ -11,6 +11,7 @@ import { AttachmentUploadModal } from '@/components/attachments/AttachmentUpload
 import { useAttachments } from '@/hooks/useAttachments';
 import { cn } from '@/lib/utils';
 import { CommentContentRenderer } from './CommentContentRenderer';
+import { AddTaskModal } from '@/components/tasks/AddTaskModal';
 
 export interface CommentsListProps {
   cardId: string;
@@ -45,6 +46,8 @@ export function CommentsList({
   const [replyAttachments, setReplyAttachments] = useState<File[]>([]);
   const [showReplyAttachmentModal, setShowReplyAttachmentModal] = useState(false);
   const [pendingReplyAttachments, setPendingReplyAttachments] = useState<any[]>([]);
+  const [showReplyTaskModal, setShowReplyTaskModal] = useState(false);
+  const [taskParentCommentId, setTaskParentCommentId] = useState<string | null>(null);
 
   // Hook para gerenciar anexos do comentário principal
   const {
@@ -448,6 +451,8 @@ export function CommentsList({
                           attachments={getAttachmentsForComment(comment.id)}
                           onDownloadAttachment={handleDownloadAttachment}
                           onDeleteAttachment={handleDeleteAttachment}
+                          cardId={cardId}
+                          commentId={comment.id}
                         />
                       </div>
                     </div>
@@ -490,6 +495,21 @@ export function CommentsList({
                             title="Anexar arquivo à resposta"
                           >
                             <Paperclip className="h-4 w-4" />
+                          </Button>
+
+                          {/* CTA Criar Tarefa integrado */}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setTaskParentCommentId(comment.id);
+                              setShowReplyTaskModal(true);
+                            }}
+                            className="absolute top-2 left-11 h-8 w-8 p-0 text-[#018942] hover:bg-[#018942]/10"
+                            title="Criar tarefa na conversa"
+                          >
+                            <ListTodo className="h-4 w-4" />
                           </Button>
                           
                         </div>
@@ -611,6 +631,25 @@ export function CommentsList({
           cardId={cardId}
         />
       )}
+
+      {/* Modal de Adicionar Tarefa (para conversas encadeadas) */}
+      <AddTaskModal
+        open={showReplyTaskModal}
+        onClose={() => {
+          setShowReplyTaskModal(false);
+          setTaskParentCommentId(null);
+        }}
+        cardId={cardId}
+        parentCommentId={taskParentCommentId || undefined}
+        onCommentCreate={async (content: string) => {
+          // Criar resposta na conversa encadeada
+          if (taskParentCommentId && onReply) {
+            const result = await onReply(taskParentCommentId, content);
+            return result;
+          }
+          return null;
+        }}
+      />
 
     </div>
   );

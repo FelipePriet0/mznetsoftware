@@ -1,11 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AttachmentCard } from './AttachmentCard';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { User, Calendar } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useTasks } from '@/hooks/useTasks';
+import { useToast } from '@/hooks/use-toast';
 
 interface CommentContentRendererProps {
   content: string;
   attachments: any[];
   onDownloadAttachment: (filePath: string, fileName: string) => void;
   onDeleteAttachment?: (attachmentId: string, filePath: string) => void;
+  cardId?: string;
+  commentId?: string;
   // Removido sistema de empresas - todos podem acessar anexos
 }
 
@@ -18,10 +26,121 @@ const FLEXIBLE_ATTACHMENT_REGEX = /📎 Anexo adicionado: (.+?)(?:\n|$)/;
 // Regex mais flexível para detectar comentários de anexo
 const ATTACHMENT_COMMENT_FLEXIBLE_REGEX = /📎 Anexo adicionado: (.+?)(?:\n|$)/;
 
-export function CommentContentRenderer({ content, attachments, onDownloadAttachment, onDeleteAttachment }: CommentContentRendererProps) {
+// Regex para detectar comentários de tarefa
+const TASK_COMMENT_REGEX = /📋 \*\*Tarefa criada\*\*\n\n👤 \*\*Para:\*\* @(.+?)\n📝 \*\*Descrição:\*\* (.+?)(?:\n📅 \*\*Prazo:\*\* (.+?))?(?:\n|$)/s;
+
+export function CommentContentRenderer({ content, attachments, onDownloadAttachment, onDeleteAttachment, cardId, commentId }: CommentContentRendererProps) {
+  const { tasks, updateTaskStatus } = useTasks(undefined, cardId);
+  const { toast } = useToast();
+  const [isUpdating, setIsUpdating] = useState(false);
+
   // Debug: verificar conteúdo do comentário (apenas se contém anexo)
   if (content.includes('📎')) {
     console.log('CommentContentRenderer processing attachment comment:', { content: content.substring(0, 100) + '...' });
+  }
+  
+  // Verificar se é um comentário de TAREFA primeiro
+  const taskMatch = content.match(TASK_COMMENT_REGEX);
+  if (taskMatch) {
+    const [, assignedTo, description, deadline] = taskMatch;
+    
+    // Encontrar a tarefa relacionada
+    const relatedTask = tasks.find(task => 
+      task.comment_id === commentId || 
+      (task.card_id === cardId && task.description === description.trim())
+    );
+    
+    const isCompleted = relatedTask?.status === 'completed';
+    
+    const handleToggleTask = async () => {
+      if (!relatedTask || isUpdating) return;
+      
+      setIsUpdating(true);
+      try {
+        const newStatus = isCompleted ? 'pending' : 'completed';
+        await updateTaskStatus(relatedTask.id, newStatus);
+        
+        toast({
+          title: newStatus === 'completed' ? 'Tarefa concluída!' : 'Tarefa reaberta',
+          description: newStatus === 'completed' 
+            ? 'A tarefa foi marcada como concluída.' 
+            : 'A tarefa foi reaberta.',
+        });
+      } catch (error) {
+        console.error('Erro ao processar tarefa:', error);
+        toast({
+          title: 'Erro ao processar tarefa',
+          description: 'Não foi possível processar a tarefa.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsUpdating(false);
+      }
+    };
+    
+    return (
+      <div className="space-y-2">
+        <div className={cn(
+          "flex items-start gap-3 p-3 border rounded-lg transition-colors",
+          isCompleted 
+            ? "bg-green-50 border-green-200" 
+            : "bg-blue-50 border-blue-200"
+        )}>
+          <div className="flex-shrink-0 mt-0.5">
+            <Checkbox
+              checked={isCompleted}
+              onCheckedChange={handleToggleTask}
+              disabled={isUpdating || !relatedTask}
+              className="w-6 h-6 border-2 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+            />
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <Badge className={cn(
+                isCompleted 
+                  ? "bg-green-500 hover:bg-green-600" 
+                  : "bg-blue-500 hover:bg-blue-600"
+              )}>
+                {isCompleted ? 'Tarefa Concluída' : 'Tarefa'}
+              </Badge>
+            </div>
+            
+            <div className={cn(
+              "space-y-2 text-sm transition-all",
+              isCompleted && "opacity-75"
+            )}>
+              <div className={cn(
+                "flex items-center gap-2",
+                isCompleted ? "text-green-700 line-through" : "text-gray-700"
+              )}>
+                <User className={cn("h-4 w-4", isCompleted ? "text-green-600" : "text-blue-600")} />
+                <span className="font-medium">Para:</span>
+                <span className={cn(isCompleted ? "text-green-700" : "text-blue-700")}>@{assignedTo}</span>
+              </div>
+              
+              <div className={cn(
+                "text-gray-900",
+                isCompleted && "line-through"
+              )}>
+                <span className="font-medium">Descrição:</span> {description}
+              </div>
+              
+              {deadline && (
+                <div className={cn(
+                  "flex items-center gap-2",
+                  isCompleted ? "text-green-700 line-through" : "text-gray-700"
+                )}>
+                  <Calendar className={cn("h-4 w-4", isCompleted ? "text-green-600" : "text-blue-600")} />
+                  <span className="font-medium">Prazo:</span>
+                  <span>{deadline}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
   
   // Verificar se é um comentário de anexo no formato antigo completo

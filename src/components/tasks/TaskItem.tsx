@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Task } from '@/types/tasks';
 import { useTasks } from '@/hooks/useTasks';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,20 +23,36 @@ interface TaskItemProps {
   task: Task;
   showCardInfo?: boolean;
   onTaskClick?: (task: Task) => void;
+  onUpdateTaskStatus?: (taskId: string, status: 'pending' | 'completed') => Promise<boolean>;
+  onDeleteTask?: (taskId: string) => Promise<boolean>;
 }
 
-export function TaskItem({ task, showCardInfo = false, onTaskClick }: TaskItemProps) {
-  const { updateTask, deleteTask } = useTasks();
+export function TaskItem({ task, showCardInfo = false, onTaskClick, onUpdateTaskStatus, onDeleteTask }: TaskItemProps) {
+  // Se os callbacks nÃ£o forem fornecidos, usar o hook padrÃ£o (fallback)
+  const { updateTaskStatus: defaultUpdateStatus, deleteTask: defaultDeleteTask } = useTasks(undefined, task.card_id);
 
   const handleToggleStatus = async (checked: boolean) => {
-    await updateTask({
-      id: task.id,
-      status: checked ? 'completed' : 'pending',
-    });
+    console.log('ðŸ”„ [TaskItem] Toggle status:', { taskId: task.id, checked, hasCallback: !!onUpdateTaskStatus });
+    
+    if (onUpdateTaskStatus) {
+      // Usar callback fornecido (preferencial - jÃ¡ estÃ¡ otimizado)
+      const success = await onUpdateTaskStatus(task.id, checked ? 'completed' : 'pending');
+      console.log('âœ… [TaskItem] Status atualizado via callback:', success);
+    } else {
+      // Fallback: usar hook padrÃ£o
+      console.log('âš ï¸ [TaskItem] Usando fallback - updateTaskStatus padrÃ£o');
+      await defaultUpdateStatus(task.id, checked ? 'completed' : 'pending');
+    }
   };
 
   const handleDelete = async () => {
-    await deleteTask(task.id);
+    console.log('ðŸ—‘ï¸ [TaskItem] Delete task:', { taskId: task.id, hasCallback: !!onDeleteTask });
+    
+    if (onDeleteTask) {
+      await onDeleteTask(task.id);
+    } else {
+      await defaultDeleteTask(task.id);
+    }
   };
 
   const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status === 'pending';
@@ -59,13 +75,13 @@ export function TaskItem({ task, showCardInfo = false, onTaskClick }: TaskItemPr
       const diffDays = Math.floor(diffMs / 86400000);
 
       if (diffMins < 60) {
-        return `há ${diffMins}min`;
+        return `hÃ¡ ${diffMins}min`;
       } else if (diffHours < 24) {
-        return `há ${diffHours}h`;
+        return `hÃ¡ ${diffHours}h`;
       } else if (diffDays === 1) {
         return 'ontem';
       } else {
-        return `há ${diffDays}d`;
+        return `hÃ¡ ${diffDays}d`;
       }
     } catch {
       return '';
@@ -90,9 +106,9 @@ export function TaskItem({ task, showCardInfo = false, onTaskClick }: TaskItemPr
         />
       </div>
 
-      {/* Conteúdo da tarefa */}
+      {/* ConteÃºdo da tarefa */}
       <div className="flex-1 min-w-0">
-        {/* Descrição */}
+        {/* DescriÃ§Ã£o */}
         <p
           className={`text-sm font-medium mb-1 ${
             task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'
@@ -127,7 +143,7 @@ export function TaskItem({ task, showCardInfo = false, onTaskClick }: TaskItemPr
             </div>
           )}
 
-          {/* Última atualização */}
+          {/* Ãšltima atualizaÃ§Ã£o */}
           <span className="text-gray-400">{formatRelativeTime(task.updated_at)}</span>
         </div>
 
@@ -139,7 +155,7 @@ export function TaskItem({ task, showCardInfo = false, onTaskClick }: TaskItemPr
         )}
       </div>
 
-      {/* Botão de deletar */}
+      {/* BotÃ£o de deletar */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button
@@ -155,7 +171,7 @@ export function TaskItem({ task, showCardInfo = false, onTaskClick }: TaskItemPr
           <AlertDialogHeader>
             <AlertDialogTitle>Deletar tarefa?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A tarefa será permanentemente removida.
+              Esta aÃ§Ã£o nÃ£o pode ser desfeita. A tarefa serÃ¡ permanentemente removida.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -169,4 +185,5 @@ export function TaskItem({ task, showCardInfo = false, onTaskClick }: TaskItemPr
     </div>
   );
 }
+
 

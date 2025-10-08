@@ -14,6 +14,8 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DeleteAttachmentDialog } from './DeleteAttachmentDialog';
+import { useAuth } from '@/context/AuthContext';
+import { canDeleteAttachment as canDeleteAttachmentFn } from '@/lib/access';
 
 interface AttachmentDisplayProps {
   attachment: CardAttachment;
@@ -33,6 +35,9 @@ export function AttachmentDisplay({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const isImage = ['jpg', 'jpeg', 'png', 'gif'].includes(attachment.file_extension.toLowerCase());
+  const { profile } = useAuth();
+
+  const canDelete = canDeleteAttachmentFn(profile, attachment.author_id, profile?.id);
   
   const handleDownload = () => {
     onDownload(attachment.file_path, attachment.file_name);
@@ -71,7 +76,7 @@ export function AttachmentDisplay({
             
             {/* File Size and Extension */}
             <div className="text-xs text-muted-foreground">
-              {formatFileSize(attachment.file_size)} â€¢ {attachment.file_extension.toUpperCase()}
+              {formatFileSize(attachment.file_size)} • {attachment.file_extension.toUpperCase()}
             </div>
             
             {/* Description */}
@@ -85,7 +90,7 @@ export function AttachmentDisplay({
             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
               <User className="h-3 w-3" />
               <span>{attachment.author_name}</span>
-              <span>â€¢</span>
+              <span>•</span>
               <Calendar className="h-3 w-3" />
               <span>
                 {formatDistanceToNow(new Date(attachment.created_at), { 
@@ -121,19 +126,21 @@ export function AttachmentDisplay({
             <Download className="h-4 w-4" />
           </Button>
           
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDeleteClick}
-            className="h-8 w-8 p-0 bg-red-600 hover:bg-red-700 text-white hover:text-white"
-            title="Remover anexo"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {canDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDeleteClick}
+              className="h-8 w-8 p-0 bg-red-600 hover:bg-red-700 text-white hover:text-white"
+              title="Remover anexo"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Modal de confirmaÃ§Ã£o de exclusÃ£o */}
+      {/* Modal de confirmação de exclusão */}
       <DeleteAttachmentDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}

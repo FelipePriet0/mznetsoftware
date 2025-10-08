@@ -34,10 +34,14 @@ export function DeleteAttachmentDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Excluir Anexo</AlertDialogTitle>
           <AlertDialogDescription>
-            Tem certeza que deseja excluir o arquivo <strong>"{attachment.file_name}"</strong>?
+            Tem certeza que deseja excluir o anexo <strong>"{attachment.file_name}"</strong>?
             <br />
             <span className="text-sm text-muted-foreground mt-2 block">
-              Esta aÃ§Ã£o nÃ£o pode ser desfeita. O arquivo serÃ¡ removido permanentemente.
+              Esta ação não pode ser desfeita. O arquivo será removido permanentemente.
+            </span>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Clique em "Confirmar exclusão" para prosseguir.
             </span>
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -53,7 +57,7 @@ export function DeleteAttachmentDialog({
             disabled={isDeleting}
             className="bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
           >
-            {isDeleting ? "Excluindo..." : "Sim, excluir"}
+            {isDeleting ? "Excluindo..." : "Confirmar exclusão"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

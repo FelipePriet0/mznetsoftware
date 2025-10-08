@@ -382,11 +382,21 @@ export function ExpandedFichaPJModal({ open, onClose, applicationId, onRefetch }
       
       console.log('📝 [PJ] Pareceres parseados:', currentNotes);
       
-      // Remover o parecer da lista
-      const updated = currentNotes.filter((p: any) => p.id !== deletingParecerId);
+      // Marcar o parecer como deletado (soft delete)
+      const updated = currentNotes.map((p: any) => {
+        if (p.id === deletingParecerId) {
+          return {
+            ...p,
+            deleted_at: new Date().toISOString(),
+            deleted_by: profile?.id,
+            deleted: true
+          };
+        }
+        return p;
+      });
       const serialized = JSON.stringify(updated);
       
-      console.log('✅ [PJ] Pareceres atualizados (sem o excluído):', updated);
+      console.log('✅ [PJ] Parecer marcado como deletado (soft delete):', deletingParecerId);
       
       // Preparar dados para update
       const updateData: any = { reanalysis_notes: serialized };

@@ -80,6 +80,8 @@ export default function ModalEditarFicha({ card, onClose, onSave, onDesingressar
     getFileIcon,
     loadAttachments 
   } = useAttachments(card?.id || '');
+  // Forçar remount da área de comentários ao anexar/excluir para recarregar listas
+  const [commentsRefreshKey, setCommentsRefreshKey] = useState(0);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -94,14 +96,104 @@ export default function ModalEditarFicha({ card, onClose, onSave, onDesingressar
   const handleUploadAttachment = async (data: any) => {
     try {
       console.log('📎 [ModalEditarFicha] Iniciando upload de anexo...');
-      await uploadAttachment(data);
+      const uploaded = await uploadAttachment(data);
       console.log('📎 [ModalEditarFicha] Upload concluído, recarregando anexos...');
       await loadAttachments();
-      console.log('📎 [ModalEditarFicha] Anexos recarregados, chamando onRefetch...');
+      console.log('📎 [ModalEditarFicha] Anexos recarregados. Verificando comentário automático de anexo...');
+
+      // Fallback: garantir que exista um comentário de "Anexo adicionado" vinculado
+      try {
+        if (uploaded && uploaded.file_name && card?.id && profile?.id) {
+          // Esperar um pouco para o trigger do banco criar o comentário (se existir)
+          await new Promise(r => setTimeout(r, 250));
+
+          // Tentar encontrar comentário criado automaticamente pelo trigger
+          const { data: recentComments } = await (supabase as any)
+            .from('card_comments')
+            .select('id, content, created_at')
+            .eq('card_id', card.id)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          const match = (recentComments || []).find((c: any) =>
+            typeof c.content === 'string' &&
+            /anexo/i.test(c.content) &&
+            c.content.toLowerCase().includes(uploaded.file_name.toLowerCase())
+          );
+
+          if (match) {
+            console.log('📎 [ModalEditarFicha] Comentário automático detectado. Vinculando attachment ao comentário:', match.id);
+            // Vincular attachment ao comentário encontrado (se ainda não vinculado)
+            try {
+              await (supabase as any)
+                .from('card_attachments')
+                .update({ comment_id: match.id })
+                .eq('id', uploaded.id);
+            } catch {}
+          } else {
+            console.log('📎 [ModalEditarFicha] Nenhum comentário automático encontrado. Criando NOVA conversa encadeada...');
+            const content = `📎 **Anexo adicionado**\n\n` +
+              `📄 **Arquivo:** ${uploaded.file_name}\n` +
+              (uploaded.description ? `📝 **Descrição:** ${uploaded.description}\n` : '') +
+              `📎 Anexo adicionado: ${uploaded.file_name}`;
+            
+            const newThreadId = `thread_${card.id}_${Date.now()}`;
+            console.log('📎 [ModalEditarFicha] ===== CRIANDO NOVA THREAD =====');
+            console.log('📎 [ModalEditarFicha] Dados do comentário (NOVA CONVERSA):', {
+              card_id: card.id,
+              author_id: profile.id,
+              author_name: currentUserName || profile.full_name || 'Usuário',
+              author_role: profile.role,
+              content: content.substring(0, 100) + '...',
+              level: 0,
+              thread_id: newThreadId,
+              is_thread_starter: true
+            });
+            
+            const { data: manualComment, error: ccErr } = await (supabase as any)
+              .from('card_comments')
+              .insert({
+                card_id: card.id,
+                author_id: profile.id,
+                author_name: currentUserName || profile.full_name || 'Usuário',
+                author_role: profile.role,
+                content,
+                level: 0,
+                thread_id: newThreadId,
+                is_thread_starter: true
+              })
+              .select('id')
+              .single();
+              
+            console.log('📎 [ModalEditarFicha] ===== RESULTADO DA CRIAÇÃO =====');
+            console.log('📎 [ModalEditarFicha] Resultado da criação do comentário:', {
+              success: !ccErr,
+              error: ccErr,
+              commentId: manualComment?.id,
+              threadId: newThreadId,
+              isThreadStarter: true
+            });
+            if (!ccErr && manualComment?.id) {
+              try {
+                await (supabase as any)
+                  .from('card_attachments')
+                  .update({ comment_id: manualComment.id })
+                  .eq('id', uploaded.id);
+              } catch {}
+            }
+          }
+        }
+      } catch (err) {
+        console.log('ℹ️ [ModalEditarFicha] Fallback de comentário ignorado:', err);
+      }
+
+      console.log('📎 [ModalEditarFicha] Chamando onRefetch...');
       // Recarregar a página para mostrar o comentário automático
       if (onRefetch) {
         onRefetch();
       }
+      // Forçar remount de CommentsList para recarregar comentários e anexos
+      setCommentsRefreshKey((k) => k + 1);
       console.log('📎 [ModalEditarFicha] Processo de upload completo!');
     } catch (error) {
       console.error('Error uploading attachment:', error);
@@ -211,7 +303,10 @@ export default function ModalEditarFicha({ card, onClose, onSave, onDesingressar
           return parecer;
         });
         
-        setPareceres(migratedList);
+        // Filtrar pareceres deletados (soft delete)
+        const activePareceres = migratedList.filter(parecer => !parecer.deleted);
+        console.log('📊 Pareceres carregados:', migratedList.length, 'Ativos:', activePareceres.length);
+        setPareceres(activePareceres);
       } catch (e) {
         setPareceres([]);
       }
@@ -435,21 +530,28 @@ export default function ModalEditarFicha({ card, onClose, onSave, onDesingressar
       
       console.log('📝 Pareceres parseados:', currentNotes);
       
-      // Remover o parecer da lista
-      const updated = currentNotes.filter((p: any) => p.id !== deletingParecerId);
+      // Marcar o parecer como deletado (soft delete)
+      const updated = currentNotes.map((p: any) => {
+        if (p.id === deletingParecerId) {
+          return {
+            ...p,
+            deleted_at: new Date().toISOString(),
+            deleted_by: profile?.id,
+            deleted: true
+          };
+        }
+        return p;
+      });
       const serialized = JSON.stringify(updated);
       
-      console.log('✅ Pareceres atualizados (sem o excluído):', updated);
+      console.log('✅ Parecer marcado como deletado (soft delete):', deletingParecerId);
       
       // Preparar dados para update
       const updateData: any = { reanalysis_notes: serialized };
       
-      // Se a lista ficou vazia, também limpar os campos legados
-      if (updated.length === 0) {
-        console.log('📝 Lista vazia - limpando também campos legados (comments, comments_short)');
-        updateData.comments = null;
-        updateData.comments_short = null;
-      }
+      // Verificar se restaram pareceres ativos (não deletados)
+      const activePareceres = updated.filter((p: any) => !p.deleted);
+      console.log('📊 Pareceres ativos restantes:', activePareceres.length);
       
       // Salvar no banco
       const { error } = await (supabase as any)
@@ -462,9 +564,9 @@ export default function ModalEditarFicha({ card, onClose, onSave, onDesingressar
         throw error;
       }
       
-      console.log('💾 Parecer excluído do banco com sucesso!', updateData);
+      console.log('💾 Parecer marcado como deletado (soft delete) no banco!', updateData);
       
-      // Atualizar estado local
+      // Atualizar estado local - remover da lista (já foi filtrado como deletado)
       setPareceres(prev => prev.filter(p => p.id !== deletingParecerId));
       setDeletingParecerId(null);
       
@@ -801,6 +903,7 @@ export default function ModalEditarFicha({ card, onClose, onSave, onDesingressar
           <div className="space-y-2">
             <Label>Observações e Conversas</Label>
             <ObservationsWithComments
+              key={commentsRefreshKey}
               name="observacoes"
               value={form.observacoes}
               onChange={handleChange}

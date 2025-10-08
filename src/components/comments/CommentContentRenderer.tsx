@@ -25,11 +25,11 @@ interface CommentContentRendererProps {
 // Regex para detectar comentários de anexo no formato antigo
 const ATTACHMENT_COMMENT_REGEX = /📎 Anexo adicionado: (.+?)\n📋 Ficha: (.+?)\n📊 Detalhes do arquivo:\n• Tipo: (.+?)\n• Tamanho: (.+?)\n• Extensão: (.+?)\n• Autor: (.+?) \((.+?)\)/s;
 
-// Regex mais flexível para detectar qualquer comentário com emoji de anexo
-const FLEXIBLE_ATTACHMENT_REGEX = /📎 Anexo adicionado: (.+?)(?:\n|$)/;
+// Regex mais flexível para detectar comentários de anexo (com ou sem emoji)
+const FLEXIBLE_ATTACHMENT_REGEX = /(?:📎\s*)?Anexo adicionado:\s*(.+?)(?:\n|$)/i;
 
-// Regex mais flexível para detectar comentários de anexo
-const ATTACHMENT_COMMENT_FLEXIBLE_REGEX = /📎 Anexo adicionado: (.+?)(?:\n|$)/;
+// Regex mais flexível para detectar comentários de anexo (backup)
+const ATTACHMENT_COMMENT_FLEXIBLE_REGEX = /(?:📎\s*)?Anexo adicionado:\s*(.+?)(?:\n|$)/i;
 
 // Regex para detectar comentários de tarefa
 const TASK_COMMENT_REGEX = /📋 \*\*Tarefa criada\*\*\n\n👤 \*\*Para:\*\* @(.+?)\n📝 \*\*Descrição:\*\* (.+?)(?:\n📅 \*\*Prazo:\*\* (.+?))?(?:\n|$)/s;
@@ -55,6 +55,19 @@ export function CommentContentRenderer({
       hasAttachmentsFromDB: attachments.length > 0,
       attachmentsFromDB: attachments
     });
+  }
+
+  // VERIFICAÇÃO: Se é comentário de anexo mas não tem anexos no banco, não renderizar
+  // Isso significa que o anexo foi soft deleted
+  const isAttachmentComment = content.includes('📎') && (
+    content.includes('Anexo adicionado:') || 
+    content.includes('Arquivo anexado:') ||
+    content.includes('📎 **Anexo adicionado**')
+  );
+  
+  if (isAttachmentComment && attachments.length === 0) {
+    console.log('🚫 Comentário de anexo deletado - não renderizando');
+    return null; // Não renderizar nada
   }
   
   // Verificar se é um comentário de TAREFA primeiro
@@ -211,7 +224,20 @@ export function CommentContentRenderer({
   // Se há anexos vindos do banco de dados E o comentário menciona anexo,
   // PRIORIZAR os anexos do banco (têm o file_path correto baseado no ID!)
   const hasAttachmentsFromDB = attachments && attachments.length > 0;
-  const isAttachmentComment = content.includes('📎');
+  const isAttachmentComment = content.includes('📎') || /Anexo adicionado:/i.test(content) || /Arquivo anexado:/i.test(content);
+  
+  console.log('🔍 CommentContentRenderer DEBUG:', {
+    content: content?.substring(0, 100) + '...',
+    hasAttachmentsFromDB,
+    isAttachmentComment,
+    attachmentCount: attachments?.length || 0,
+    attachments: attachments?.map(a => ({
+      id: a.id,
+      file_name: a.file_name,
+      file_path: a.file_path,
+      comment_id: a.comment_id
+    }))
+  });
   
   if (isAttachmentComment && hasAttachmentsFromDB) {
     console.log('✅ Usando anexos do banco de dados (file_path pelo ID):', {
@@ -327,47 +353,9 @@ export function CommentContentRenderer({
     );
   }
 
-  // FALLBACK: Verificar se é um comentário de anexo mais simples (apenas com emoji)
-  // (só usar isso se NÃO houver anexos no banco de dados)
-  const simpleAttachmentMatch = content.match(ATTACHMENT_COMMENT_FLEXIBLE_REGEX);
-  if (simpleAttachmentMatch && !hasAttachmentsFromDB) {
-    const fileName = simpleAttachmentMatch[1].trim();
-    
-    // Tentar extrair informações adicionais do conteúdo
-    const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'file';
-    
-    // Tentar extrair o título do card do conteúdo
-    const cardTitleMatch = content.match(/📋 Ficha: (.+?)(?:\n|$)/);
-    const cardTitle = cardTitleMatch ? cardTitleMatch[1].trim() : 'Card';
-    
-    const attachmentData = {
-      id: `comment-attachment-${Date.now()}`,
-      file_name: fileName,
-      file_path: `${cardTitle}/${fileName}`, // Tentar recriar o caminho
-      file_size: 0,
-      file_type: `application/${fileExtension}`,
-      file_extension: fileExtension,
-      author_name: 'Sistema',
-      description: cardTitle,
-      created_at: new Date().toISOString()
-    };
-
-    // Debug reduzido
-    console.log('Created simple attachment:', { file_name: attachmentData.file_name });
-
-    return (
-      <div className="space-y-2">
-        <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-          Arquivo anexado:
-        </div>
-        <AttachmentCard 
-          attachment={attachmentData}
-          onDownload={onDownloadAttachment}
-          onDelete={onDeleteAttachment}
-        />
-      </div>
-    );
-  }
+  // REMOVIDO: Fallback que criava anexos fantasma
+  // Agora só mostra anexos que realmente existem no banco de dados
+  // Se o anexo foi deletado, não mostra nada (comportamento correto)
 
   // Se não for um comentário de anexo, renderizar como texto normal
   // Mas também verificar se há anexos no array attachments

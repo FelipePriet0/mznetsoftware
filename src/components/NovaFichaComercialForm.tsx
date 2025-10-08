@@ -522,11 +522,21 @@ export default function NovaFichaComercialForm({ onSubmit, onCancel, initialValu
       if (Array.isArray(raw)) currentNotes = raw as any[];
       else if (typeof raw === 'string') { try { currentNotes = JSON.parse(raw) || []; } catch {} }
       
-      // Remover o parecer da lista
-      const updated = currentNotes.filter((p: any) => p.id !== deletingParecerId);
+      // Marcar o parecer como deletado (soft delete)
+      const updated = currentNotes.map((p: any) => {
+        if (p.id === deletingParecerId) {
+          return {
+            ...p,
+            deleted_at: new Date().toISOString(),
+            deleted_by: profile?.id,
+            deleted: true
+          };
+        }
+        return p;
+      });
       const serialized = JSON.stringify(updated);
       
-      console.log('✅ [Comercial] Pareceres atualizados (sem o excluído):', updated);
+      console.log('✅ [Comercial] Parecer marcado como deletado (soft delete):', deletingParecerId);
       
       // Preparar dados para update
       const updateData: any = { reanalysis_notes: serialized };

@@ -81,7 +81,20 @@ export default function Tarefas() {
       // Buscar dados frescos do banco (mesmo jeito que KanbanBoard faz)
       const { data: freshCard, error } = await (supabase as any)
         .from('kanban_cards')
-        .select('*')
+        .select(`
+          id,
+          area,
+          stage,
+          person_type,
+          assignee_id,
+          title,
+          cpf_cnpj,
+          phone,
+          email,
+          received_at,
+          due_at,
+          applicant:applicant_id ( id, primary_name, city, uf, email )
+        `)
         .eq('id', cardId)
         .single();
 
@@ -92,23 +105,37 @@ export default function Tarefas() {
 
       console.log('✅ Card carregado:', freshCard);
 
-      // Mapear para o formato CardItem esperado pelo ModalEditarFicha
-      // (mesmo formato que o KanbanBoard usa)
+      // Mapear para o formato CardItem compatível com o ModalEditarFicha
+      const receivedAt = freshCard.received_at ? new Date(freshCard.received_at).toISOString() : new Date().toISOString();
+      const deadline = freshCard.due_at ? new Date(freshCard.due_at).toISOString() : receivedAt;
+      const toColumnId = (() => {
+        if (freshCard.area === 'comercial') {
+          const stageMap: Record<string, string> = {
+            entrada: 'com_entrada',
+            feitas: 'com_feitas',
+            aguardando_doc: 'com_aguardando',
+            canceladas: 'com_canceladas',
+            concluidas: 'com_concluidas',
+          };
+          return stageMap[freshCard.stage] || 'com_entrada';
+        }
+        return freshCard.stage;
+      })();
+
       const mappedCard = {
         id: freshCard.id,
-        nome: freshCard.title,
-        telefone: freshCard.phone,
-        deadline: freshCard.deadline,
-        receivedAt: freshCard.received_at,
-        updatedAt: freshCard.updated_at,
-        status: freshCard.status,
-        columnId: freshCard.column_id,
-        parecer: freshCard.reanalysis_notes || freshCard.comments || freshCard.comments_short || '',
-        email: freshCard.email,
-        cpf: freshCard.cpf,
-        // Incluir TODOS os campos do kanban_cards
-        ...freshCard
-      };
+        nome: freshCard.title ?? freshCard.applicant?.primary_name ?? 'Cliente',
+        telefone: freshCard.phone || undefined,
+        email: freshCard.email || freshCard.applicant?.email || undefined,
+        cpf: freshCard.cpf_cnpj || '',
+        receivedAt,
+        deadline,
+        updatedAt: receivedAt,
+        lastMovedAt: receivedAt,
+        columnId: toColumnId,
+        parecer: (freshCard as any).reanalysis_notes || (freshCard as any).comments || (freshCard as any).comments_short || '',
+        applicantId: freshCard.applicant?.id,
+      } as any;
 
       setSelectedCardData(mappedCard);
       setSelectedCardId(cardId);
@@ -345,4 +372,3 @@ export default function Tarefas() {
     </div>
   );
 }
-

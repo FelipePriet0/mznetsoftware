@@ -1767,10 +1767,6 @@ function KanbanCard({
             {format(new Date(card.deadline), "dd/MM/yyyy")}
           </div>
           <div>
-            <span className="font-medium text-foreground">Score: </span>
-            {card.score ?? "—"}
-          </div>
-          <div>
             <span className="font-medium text-foreground">Resp.: </span>
             {card.responsavel ?? "—"}
           </div>

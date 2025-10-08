@@ -63,11 +63,17 @@ export function canDownloadAttachment(profile: Profile | null | undefined, attac
   return role === "vendedor" || role === "analista" || role === "gestor";
 }
 
-export function canDeleteAttachment(profile: Profile | null | undefined, attachmentAuthorId?: string, currentUserId?: string) {
+export function canDeleteAttachment(
+  profile: Profile | null | undefined,
+  attachmentAuthorId?: string,
+  currentUserId?: string
+) {
   if (!profile) return false;
-  
+
   const role = norm(profile.role);
-  
-  // Todos os roles podem deletar anexos (sistema único de empresa)
-  return role === "vendedor" || role === "analista" || role === "gestor";
+
+  // Regra de negócio: Autor do anexo pode deletar; Gestor pode deletar qualquer um
+  if (role === "gestor") return true;
+  if (attachmentAuthorId && currentUserId && attachmentAuthorId === currentUserId) return true;
+  return false;
 }

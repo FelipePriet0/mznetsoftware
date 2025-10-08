@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { CommentContentRenderer } from './CommentContentRenderer';
 import { AddTaskModal } from '@/components/tasks/AddTaskModal';
 import { useTasks } from '@/hooks/useTasks';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface CommentsListProps {
   cardId: string;
@@ -95,34 +96,55 @@ export function CommentsList({
 
   // Função para obter anexos de um comentário específico
   const getAttachmentsForComment = (commentId: string, commentCardId: string, content?: string) => {
-    // Primeiro, tentar filtrar por comment_id (anexos novos)
+    console.log('🔍 getAttachmentsForComment chamada:', {
+      commentId,
+      commentCardId,
+      content: content?.substring(0, 100) + '...',
+      totalAttachments: attachments.length,
+      attachmentsDetails: attachments.map(a => ({
+        id: a.id,
+        file_name: a.file_name,
+        deleted_at: a.deleted_at,
+        deleted_by: a.deleted_by,
+        comment_id: a.comment_id
+      }))
+    });
+
+    // 1. PRIMEIRO: Tentar filtrar por comment_id (anexos novos com vínculo correto)
     let commentAttachments = attachments.filter(attachment => 
       attachment.comment_id === commentId
     );
-    
-    // Se não encontrar e o comentário tiver emoji de anexo, tentar match por nome de arquivo + card_id
-    if (commentAttachments.length === 0 && content && content.includes('📎')) {
+
+    console.log('🔍 Anexos por comment_id:', commentAttachments.length);
+
+    // 2. SEGUNDO: Se não encontrar e o comentário mencionar anexo, usar fallback
+    const mentionsAttachment = !!content && (
+      content.includes('📎') ||
+      content.toLowerCase().includes('anexo adicionado:') ||
+      content.toLowerCase().includes('arquivo anexado:') ||
+      content.toLowerCase().includes('arquivo anexado')
+    );
+
+    // 3. TERCEIRO: Se não encontrar anexos por comment_id, tentar fallback para TODOS os anexos do card
+    if (commentAttachments.length === 0 && content && mentionsAttachment) {
+      console.log('🔍 Usando fallback para anexos sem comment_id');
+      
       // Extrair nome do arquivo do texto do comentário
-      const fileNameMatch = content.match(/📎 Anexo adicionado: (.+?)(?:\n|$)/);
-      // Extrair nome do card do texto do comentário (para fallback de anexos antigos)
-      const cardNameMatch = content.match(/📋 Ficha: (.+?)(?:\n|$)/);
+      const fileNameMatch = (
+        content.match(/📎\s*Anexo adicionado:\s*(.+?)(?:\n|$)/) ||
+        content.match(/Anexo adicionado:\s*(.+?)(?:\n|$)/i) ||
+        content.match(/Arquivo anexado:\s*(.+?)(?:\n|$)/i)
+      );
       
       if (fileNameMatch) {
         const fileName = fileNameMatch[1].trim();
-        const cardName = cardNameMatch ? cardNameMatch[1].trim() : null;
+        console.log('🔍 Nome do arquivo extraído:', fileName);
         
-        // Buscar anexos que NÃO têm comment_id
+        // Buscar TODOS os anexos que NÃO têm comment_id (anexos órfãos)
         const attachmentsWithoutComment = attachments.filter(a => !a.comment_id);
+        console.log('🔍 Anexos sem comment_id:', attachmentsWithoutComment.length);
         
-        console.log('🔍 DEBUG Match:', {
-          fileName,
-          cardName,
-          commentCardId,
-          totalAttachments: attachments.length,
-          attachmentsWithoutComment: attachmentsWithoutComment.length
-        });
-        
-        // Filtrar por nome de arquivo
+        // Filtrar por nome de arquivo EXATO
         let candidateAttachments = attachmentsWithoutComment.filter(attachment => 
           attachment.file_name === fileName || 
           attachment.file_name?.toLowerCase() === fileName.toLowerCase()
@@ -135,53 +157,34 @@ export function CommentsList({
             id: a.id, 
             file_name: a.file_name, 
             file_path: a.file_path,
-            card_id: a.card_id
+            card_id: a.card_id,
+            created_at: a.created_at
           }))
         });
         
-        // Se tem múltiplos matches, filtrar por card_id (muito mais confiável!)
+        // Se tem múltiplos matches, filtrar por card_id
         if (candidateAttachments.length > 1) {
-          // Priorizar anexos que pertencem ao card atual (card_id)
-          // ✅ Usar commentCardId em vez de cardId (card do comentário pode ser diferente do card atual)
           const filteredByCardId = candidateAttachments.filter(attachment => 
             attachment.card_id === commentCardId
           );
           
           if (filteredByCardId.length > 0) {
             console.log('🔍 Filtrando por card_id:', {
-              cardId,
+              commentCardId,
               beforeFilter: candidateAttachments.length,
-              afterFilter: filteredByCardId.length,
-              selected: filteredByCardId.map(a => ({ file_name: a.file_name, file_path: a.file_path }))
+              afterFilter: filteredByCardId.length
             });
             candidateAttachments = filteredByCardId;
-          } else if (cardName) {
-            // FALLBACK: Se não encontrou por card_id, tentar por nome no file_path (para anexos antigos)
-            const filteredByCard = candidateAttachments.filter(attachment => 
-              attachment.file_path?.includes(cardName) ||
-              attachment.file_path?.toLowerCase().includes(cardName.toLowerCase())
-            );
-            
-            if (filteredByCard.length > 0) {
-              console.log('🔍 Filtrando por nome do card no file_path (fallback):', {
-                cardName,
-                beforeFilter: candidateAttachments.length,
-                afterFilter: filteredByCard.length,
-                selected: filteredByCard.map(a => ({ file_name: a.file_name, file_path: a.file_path }))
-              });
-              candidateAttachments = filteredByCard;
-            }
           }
         }
         
         // Pegar o mais recente se ainda tiver múltiplos
         if (candidateAttachments.length > 0) {
-          // Ordenar por created_at DESC e pegar o primeiro (mais recente)
           commentAttachments = [candidateAttachments.sort((a, b) => 
             new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
           )[0]];
           
-          console.log('✅ Anexo selecionado:', {
+          console.log('✅ Anexo selecionado via fallback:', {
             fileName,
             selected: commentAttachments.map(a => ({ 
               id: a.id, 
@@ -196,11 +199,37 @@ export function CommentsList({
       }
     }
     
-    console.log('🔍 getAttachmentsForComment:', {
+    // 4. QUARTO: Se ainda não encontrou nada, tentar mostrar TODOS os anexos recentes do card
+    if (commentAttachments.length === 0 && content && mentionsAttachment) {
+      console.log('🔍 Fallback final: Mostrando anexos recentes do card');
+      
+      // Buscar anexos recentes do mesmo card (últimos 5 minutos)
+      const recentAttachments = attachments.filter(attachment => {
+        const attachmentTime = new Date(attachment.created_at || 0).getTime();
+        const now = Date.now();
+        const fiveMinutesAgo = now - (5 * 60 * 1000);
+        
+        return attachment.card_id === commentCardId && 
+               attachmentTime > fiveMinutesAgo &&
+               !attachment.comment_id;
+      });
+      
+      if (recentAttachments.length > 0) {
+        console.log('🔍 Anexos recentes encontrados:', recentAttachments.length);
+        commentAttachments = recentAttachments.slice(0, 1); // Pegar apenas o mais recente
+      }
+    }
+    
+    console.log('🔍 RESULTADO FINAL:', {
       commentId,
       totalAttachments: attachments.length,
       commentAttachments: commentAttachments.length,
-      allAttachments: attachments.map(a => ({ id: a.id, comment_id: a.comment_id, file_name: a.file_name, file_path: a.file_path }))
+      attachmentDetails: commentAttachments.map(a => ({ 
+        id: a.id, 
+        file_name: a.file_name, 
+        file_path: a.file_path,
+        comment_id: a.comment_id
+      }))
     });
     
     return commentAttachments;
@@ -374,9 +403,10 @@ export function CommentsList({
               try {
                 // Criar anexo associado ao comentário de resposta
                 const attachmentData = {
-                  ...pendingAttachment,
-                  commentId: result.id // Associar ao comentário recém-criado
-                };
+                  file: pendingAttachment,
+                  commentId: result.id, // Associar ao comentário recém-criado
+                  customFileName: pendingAttachment.name.replace(/\.[^/.]+$/, '')
+                } as any;
                 await uploadAttachment(attachmentData);
               } catch (error) {
                 console.error('🚨 ERRO ao fazer upload de anexo pendente:', error);
@@ -461,27 +491,60 @@ export function CommentsList({
 
   const handleReplyAttachmentUpload = async (data: any) => {
     try {
-      // Armazenar anexo como pendente (não fazer upload ainda)
-      const pendingAttachment = {
-        ...data,
-        id: `pending-${Date.now()}`,
-        pending: true
-      };
+      console.log('📎 DEBUG: Iniciando upload de anexo para resposta:', data);
       
-      console.log('📎 DEBUG: Anexo adicionado aos pendentes:', {
-        pendingAttachment,
-        totalPending: pendingReplyAttachments.length + 1
-      });
-      
-      setPendingReplyAttachments(prev => {
-        const newPending = [...prev, pendingAttachment];
-        console.log('📎 DEBUG: Estado atualizado, pendentes:', newPending.length);
-        return newPending;
-      });
-      setReplyAttachments(prev => [...prev, data.file]);
-      setShowReplyAttachmentModal(false);
+      // Criar resposta na conversa encadeada automaticamente
+      if (replyingTo && onReply) {
+        const commentContent = `📎 **Anexo adicionado**\n\n` +
+          `📄 **Arquivo:** ${data.customFileName || data.file.name}\n` +
+          (data.description ? `📝 **Descrição:** ${data.description}\n` : '') +
+          `📎 Anexo adicionado: ${data.customFileName || data.file.name}`;
+        
+        console.log('📎 DEBUG: Criando resposta na conversa:', {
+          parentId: replyingTo,
+          content: commentContent
+        });
+        
+        // Criar o comentário primeiro
+        const result = await onReply(replyingTo, commentContent);
+        
+        if (result) {
+          console.log('📎 DEBUG: Resposta criada com sucesso:', result);
+          
+          // Agora fazer upload do anexo e vincular ao comentário
+          try {
+            const uploadedAttachment = await uploadAttachment(data);
+            console.log('📎 DEBUG: Anexo enviado com sucesso:', uploadedAttachment);
+            
+            // Vincular anexo ao comentário criado
+            if (uploadedAttachment && result.id) {
+              const { error: updateError } = await supabase
+                .from('card_attachments')
+                .update({ comment_id: result.id })
+                .eq('id', uploadedAttachment.id);
+              
+              if (updateError) {
+                console.error('📎 ERROR: Erro ao vincular anexo ao comentário:', updateError);
+              } else {
+                console.log('📎 DEBUG: Anexo vinculado ao comentário com sucesso');
+              }
+            }
+          } catch (uploadError) {
+            console.error('📎 ERROR: Erro no upload do anexo:', uploadError);
+          }
+          
+          // Fechar modal e resetar estado
+          setShowReplyAttachmentModal(false);
+          setReplyingTo(null);
+          
+          // Atualizar comentários
+          if (onRefetch) {
+            onRefetch();
+          }
+        }
+      }
     } catch (error) {
-      console.error('Error preparing attachment for reply:', error);
+      console.error('📎 ERROR: Erro ao fazer upload de anexo para resposta:', error);
     }
   };
 

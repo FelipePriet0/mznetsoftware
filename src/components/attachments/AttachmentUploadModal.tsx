@@ -49,12 +49,17 @@ export function AttachmentUploadModal({
 
     // Validate file type
     const allowedTypes = [
-      'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+      // Imagens comuns
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif',
+      // PDF
       'application/pdf',
+      // Documentos Office
       'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/plain',
-      'application/zip', 'application/x-rar-compressed'
+      // Texto e compactados
+      'text/plain', 'application/zip', 'application/x-rar-compressed',
+      // Fallback genérico (alguns navegadores reportam assim)
+      'application/octet-stream'
     ];
 
     if (!allowedTypes.includes(file.type)) {
@@ -71,8 +76,9 @@ export function AttachmentUploadModal({
 
     setSelectedFiles(prev => [...prev, file]);
     
-    // NÃO gerar nome padrão - campo deve vir vazio para o usuário preencher
-    setFileNames(prev => ({ ...prev, [file.name]: '' }));
+    // Gerar nome padrão baseado no nome do arquivo (sem extensão)
+    const baseName = file.name.replace(/\.[^/.]+$/, '');
+    setFileNames(prev => ({ ...prev, [file.name]: baseName }));
     setHasChanges(true);
   };
 

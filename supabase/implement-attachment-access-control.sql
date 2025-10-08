@@ -1,18 +1,18 @@
--- ===================================================
+﻿-- ===================================================
 -- SISTEMA DE CONTROLE DE ACESSO PARA ANEXOS
 -- ===================================================
 
--- 1. ATUALIZAR POLÍTICAS RLS PARA CARD_ATTACHMENTS
+-- 1. ATUALIZAR POLÃTICAS RLS PARA CARD_ATTACHMENTS
 -- ===================================================
 
--- Remover políticas antigas (muito permissivas)
+-- Remover polÃ­ticas antigas (muito permissivas)
 DROP POLICY IF EXISTS "Allow view attachments from accessible cards" ON public.card_attachments;
 DROP POLICY IF EXISTS "Allow insert attachments for accessible cards" ON public.card_attachments;
 DROP POLICY IF EXISTS "Allow update own attachments" ON public.card_attachments;
 DROP POLICY IF EXISTS "Allow delete own attachments" ON public.card_attachments;
 
--- Criar novas políticas baseadas em roles e empresas
--- Visualizar anexos: mesmos critérios dos cards (mesma empresa ou premium)
+-- Criar novas polÃ­ticas baseadas em roles e empresas
+-- Visualizar anexos: mesmos critÃ©rios dos cards (mesma empresa ou premium)
 CREATE POLICY "View attachments same company or premium" ON public.card_attachments
 FOR SELECT USING (
   EXISTS (
@@ -25,7 +25,7 @@ FOR SELECT USING (
       -- Mesma empresa
       public.same_company(kc.company_id)
       OR
-      -- Autor pode ver seus próprios anexos
+      -- Autor pode ver seus prÃ³prios anexos
       author_id = auth.uid()
     )
   )
@@ -47,7 +47,7 @@ FOR INSERT WITH CHECK (
   )
 );
 
--- Atualizar anexos: apenas próprios anexos
+-- Atualizar anexos: apenas prÃ³prios anexos
 CREATE POLICY "Update own attachments" ON public.card_attachments
 FOR UPDATE USING (
   author_id = auth.uid()
@@ -55,23 +55,23 @@ FOR UPDATE USING (
   author_id = auth.uid()
 );
 
--- Deletar anexos: apenas próprios anexos ou premium
+-- Deletar anexos: apenas prÃ³prios anexos ou premium
 CREATE POLICY "Delete own attachments or premium" ON public.card_attachments
 FOR DELETE USING (
   author_id = auth.uid() OR public.is_premium()
 );
 
 -- ===================================================
--- 2. ATUALIZAR POLÍTICAS RLS PARA STORAGE
+-- 2. ATUALIZAR POLÃTICAS RLS PARA STORAGE
 -- ===================================================
 
--- Remover políticas antigas do storage
+-- Remover polÃ­ticas antigas do storage
 DROP POLICY IF EXISTS "Allow view card attachments from accessible cards" ON storage.objects;
 DROP POLICY IF EXISTS "Allow upload card attachments for accessible cards" ON storage.objects;
 DROP POLICY IF EXISTS "Allow update own card attachments" ON storage.objects;
 DROP POLICY IF EXISTS "Allow delete own card attachments" ON storage.objects;
 
--- Visualizar arquivos: mesmos critérios dos anexos
+-- Visualizar arquivos: mesmos critÃ©rios dos anexos
 CREATE POLICY "View card attachments same company or premium" ON storage.objects
 FOR SELECT USING (
   bucket_id = 'card-attachments' AND
@@ -87,7 +87,7 @@ FOR SELECT USING (
       -- Mesma empresa
       public.same_company(kc.company_id)
       OR
-      -- Autor pode ver seus próprios anexos
+      -- Autor pode ver seus prÃ³prios anexos
       ca.author_id = auth.uid()
     )
   )
@@ -113,7 +113,7 @@ FOR INSERT WITH CHECK (
   )
 );
 
--- Atualizar arquivos: apenas próprios arquivos
+-- Atualizar arquivos: apenas prÃ³prios arquivos
 CREATE POLICY "Update own card attachments" ON storage.objects
 FOR UPDATE USING (
   bucket_id = 'card-attachments' AND
@@ -125,7 +125,7 @@ FOR UPDATE USING (
   )
 );
 
--- Deletar arquivos: apenas próprios arquivos ou premium
+-- Deletar arquivos: apenas prÃ³prios arquivos ou premium
 CREATE POLICY "Delete own card attachments or premium" ON storage.objects
 FOR DELETE USING (
   bucket_id = 'card-attachments' AND
@@ -142,7 +142,7 @@ FOR DELETE USING (
 );
 
 -- ===================================================
--- 3. CRIAR FUNÇÃO PARA VERIFICAR PERMISSÕES DE ANEXO
+-- 3. CRIAR FUNÃ‡ÃƒO PARA VERIFICAR PERMISSÃ•ES DE ANEXO
 -- ===================================================
 
 CREATE OR REPLACE FUNCTION public.can_access_attachment(attachment_id uuid)
@@ -162,14 +162,14 @@ AS $$
       -- Mesma empresa
       public.same_company(kc.company_id)
       OR
-      -- Autor pode acessar seus próprios anexos
+      -- Autor pode acessar seus prÃ³prios anexos
       ca.author_id = auth.uid()
     )
   );
 $$;
 
 -- ===================================================
--- 4. CRIAR FUNÇÃO PARA VERIFICAR PERMISSÕES DE UPLOAD
+-- 4. CRIAR FUNÃ‡ÃƒO PARA VERIFICAR PERMISSÃ•ES DE UPLOAD
 -- ===================================================
 
 CREATE OR REPLACE FUNCTION public.can_upload_attachment(card_id_param uuid)
@@ -192,7 +192,7 @@ AS $$
 $$;
 
 -- ===================================================
--- 5. CRIAR FUNÇÃO PARA VERIFICAR PERMISSÕES DE DOWNLOAD
+-- 5. CRIAR FUNÃ‡ÃƒO PARA VERIFICAR PERMISSÃ•ES DE DOWNLOAD
 -- ===================================================
 
 CREATE OR REPLACE FUNCTION public.can_download_attachment(file_path_param text)
@@ -212,14 +212,14 @@ AS $$
       -- Mesma empresa
       public.same_company(kc.company_id)
       OR
-      -- Autor pode baixar seus próprios anexos
+      -- Autor pode baixar seus prÃ³prios anexos
       ca.author_id = auth.uid()
     )
   );
 $$;
 
 -- ===================================================
--- 6. GRANT PERMISSÕES PARA AS NOVAS FUNÇÕES
+-- 6. GRANT PERMISSÃ•ES PARA AS NOVAS FUNÃ‡Ã•ES
 -- ===================================================
 
 GRANT EXECUTE ON FUNCTION public.can_access_attachment(uuid) TO authenticated;
@@ -227,5 +227,5 @@ GRANT EXECUTE ON FUNCTION public.can_upload_attachment(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.can_download_attachment(text) TO authenticated;
 
 -- ===================================================
--- CONCLUÍDO
+-- CONCLUÃDO
 -- ===================================================

@@ -1,8 +1,8 @@
--- =====================================================
--- FIX: Liberar SELECT em profiles para TODOS usuários
+﻿-- =====================================================
+-- FIX: Liberar SELECT em profiles para TODOS usuÃ¡rios
 -- =====================================================
 -- OBJETIVO: Permitir que todos os colaboradores vejam 
--- a lista completa de usuários (necessário para o modal
+-- a lista completa de usuÃ¡rios (necessÃ¡rio para o modal
 -- de criar tarefas e mencionar colaboradores)
 -- =====================================================
 
@@ -18,8 +18,8 @@ USING (true);
 
 -- =====================================================
 -- RESULTADO ESPERADO:
--- - Vendedores podem ver todos os colaboradores ✅
--- - Analistas podem ver todos os colaboradores ✅
--- - Gestores podem ver todos os colaboradores ✅
+-- - Vendedores podem ver todos os colaboradores âœ…
+-- - Analistas podem ver todos os colaboradores âœ…
+-- - Gestores podem ver todos os colaboradores âœ…
 -- =====================================================
 

@@ -1,4 +1,4 @@
--- Create kanban_cards table for the new backend
+﻿-- Create kanban_cards table for the new backend
 CREATE TABLE IF NOT EXISTS public.kanban_cards (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   applicant_id uuid REFERENCES public.applicants(id) ON DELETE CASCADE,

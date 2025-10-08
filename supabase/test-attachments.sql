@@ -1,4 +1,4 @@
--- Test script for card attachments functionality
+﻿-- Test script for card attachments functionality
 -- Run this after applying the migrations to verify everything works
 
 -- 1. Test if bucket exists

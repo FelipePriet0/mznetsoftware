@@ -1,9 +1,9 @@
--- =====================================================
+﻿-- =====================================================
 -- SCRIPT COMPLETO PARA CRIAR SISTEMA DE ANEXOS
 -- Execute este script no Supabase SQL Editor
 -- =====================================================
 
--- 1. CRIAR TABELA card_comments (necessária para os triggers)
+-- 1. CRIAR TABELA card_comments (necessÃ¡ria para os triggers)
 CREATE TABLE IF NOT EXISTS public.card_comments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   card_id uuid NOT NULL REFERENCES public.kanban_cards(id) ON DELETE CASCADE,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.card_comments (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Índices para card_comments
+-- Ãndices para card_comments
 CREATE INDEX IF NOT EXISTS idx_card_comments_card_id ON public.card_comments (card_id);
 CREATE INDEX IF NOT EXISTS idx_card_comments_parent_id ON public.card_comments (parent_id);
 CREATE INDEX IF NOT EXISTS idx_card_comments_author_id ON public.card_comments (author_id);
@@ -68,13 +68,13 @@ CREATE TABLE IF NOT EXISTS public.card_attachments (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 3. CRIAR ÍNDICES PARA PERFORMANCE
+-- 3. CRIAR ÃNDICES PARA PERFORMANCE
 CREATE INDEX IF NOT EXISTS idx_card_attachments_card_id ON public.card_attachments (card_id);
 CREATE INDEX IF NOT EXISTS idx_card_attachments_author_id ON public.card_attachments (author_id);
 CREATE INDEX IF NOT EXISTS idx_card_attachments_created_at ON public.card_attachments (created_at);
 CREATE INDEX IF NOT EXISTS idx_card_attachments_comment_id ON public.card_attachments (comment_id);
 
--- 4. CRIAR FUNÇÃO PARA ATUALIZAR updated_at
+-- 4. CRIAR FUNÃ‡ÃƒO PARA ATUALIZAR updated_at
 CREATE OR REPLACE FUNCTION public.set_timestamp_card_attachments()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -97,20 +97,20 @@ ON CONFLICT (id) DO NOTHING;
 -- 7. CRIAR RLS POLICIES PARA A TABELA
 ALTER TABLE public.card_attachments ENABLE ROW LEVEL SECURITY;
 
--- Permitir visualizar anexos de cards acessíveis
+-- Permitir visualizar anexos de cards acessÃ­veis
 CREATE POLICY "Allow view attachments from accessible cards" ON public.card_attachments
 FOR SELECT USING (
   auth.uid() IS NOT NULL
 );
 
--- Permitir inserir anexos para cards acessíveis
+-- Permitir inserir anexos para cards acessÃ­veis
 CREATE POLICY "Allow insert attachments for accessible cards" ON public.card_attachments
 FOR INSERT WITH CHECK (
   author_id = auth.uid() AND
   auth.uid() IS NOT NULL
 );
 
--- Permitir atualizar apenas próprios anexos
+-- Permitir atualizar apenas prÃ³prios anexos
 CREATE POLICY "Allow update own attachments" ON public.card_attachments
 FOR UPDATE USING (
   author_id = auth.uid()
@@ -118,28 +118,28 @@ FOR UPDATE USING (
   author_id = auth.uid()
 );
 
--- Permitir deletar apenas próprios anexos
+-- Permitir deletar apenas prÃ³prios anexos
 CREATE POLICY "Allow delete own attachments" ON public.card_attachments
 FOR DELETE USING (
   author_id = auth.uid()
 );
 
 -- 8. CRIAR RLS POLICIES PARA O BUCKET DE STORAGE
--- Permitir visualizar arquivos de cards acessíveis
+-- Permitir visualizar arquivos de cards acessÃ­veis
 CREATE POLICY "Allow view card attachments from accessible cards" ON storage.objects
 FOR SELECT USING (
   bucket_id = 'card-attachments' AND
   auth.uid() IS NOT NULL
 );
 
--- Permitir upload de arquivos para cards acessíveis
+-- Permitir upload de arquivos para cards acessÃ­veis
 CREATE POLICY "Allow upload card attachments for accessible cards" ON storage.objects
 FOR INSERT WITH CHECK (
   bucket_id = 'card-attachments' AND
   auth.uid() IS NOT NULL
 );
 
--- Permitir atualizar apenas próprios arquivos
+-- Permitir atualizar apenas prÃ³prios arquivos
 CREATE POLICY "Allow update own card attachments" ON storage.objects
 FOR UPDATE USING (
   bucket_id = 'card-attachments' AND
@@ -154,7 +154,7 @@ FOR UPDATE USING (
   auth.uid() IS NOT NULL
 );
 
--- Permitir deletar apenas próprios arquivos
+-- Permitir deletar apenas prÃ³prios arquivos
 CREATE POLICY "Allow delete own card attachments" ON storage.objects
 FOR DELETE USING (
   bucket_id = 'card-attachments' AND
@@ -166,33 +166,33 @@ FOR DELETE USING (
   )
 );
 
--- 9. CRIAR FUNÇÃO PARA COMENTÁRIO AUTOMÁTICO NO UPLOAD
+-- 9. CRIAR FUNÃ‡ÃƒO PARA COMENTÃRIO AUTOMÃTICO NO UPLOAD
 CREATE OR REPLACE FUNCTION public.create_attachment_comment()
 RETURNS TRIGGER AS $$
 DECLARE
   comment_content TEXT;
 BEGIN
-  -- Criar conteúdo do comentário
+  -- Criar conteÃºdo do comentÃ¡rio
   comment_content := format(
-    '📎 Anexo adicionado: %s',
+    'ðŸ“Ž Anexo adicionado: %s',
     NEW.file_name
   );
   
-  -- Adicionar descrição se fornecida
+  -- Adicionar descriÃ§Ã£o se fornecida
   IF NEW.description IS NOT NULL AND NEW.description != '' THEN
     comment_content := comment_content || format(
-      E'\n\n📝 Descrição: %s',
+      E'\n\nðŸ“ DescriÃ§Ã£o: %s',
       NEW.description
     );
   END IF;
 
   -- Adicionar detalhes do arquivo
   comment_content := comment_content || format(
-    E'\n\n📊 Detalhes do arquivo:' ||
-    E'\n• Tipo: %s' ||
-    E'\n• Tamanho: %s bytes' ||
-    E'\n• Extensão: %s' ||
-    E'\n• Autor: %s (%s)',
+    E'\n\nðŸ“Š Detalhes do arquivo:' ||
+    E'\nâ€¢ Tipo: %s' ||
+    E'\nâ€¢ Tamanho: %s bytes' ||
+    E'\nâ€¢ ExtensÃ£o: %s' ||
+    E'\nâ€¢ Autor: %s (%s)',
     NEW.file_type,
     NEW.file_size,
     NEW.file_extension,
@@ -200,7 +200,7 @@ BEGIN
     NEW.author_role
   );
 
-  -- Inserir comentário na tabela card_comments
+  -- Inserir comentÃ¡rio na tabela card_comments
   INSERT INTO public.card_comments (
     card_id,
     author_id,
@@ -214,38 +214,38 @@ BEGIN
     NEW.author_name,
     NEW.author_role,
     comment_content,
-    0 -- Nível de comentário principal
+    0 -- NÃ­vel de comentÃ¡rio principal
   );
 
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- 10. CRIAR TRIGGER PARA COMENTÁRIO NO UPLOAD
+-- 10. CRIAR TRIGGER PARA COMENTÃRIO NO UPLOAD
 CREATE TRIGGER trg_create_attachment_comment
   AFTER INSERT ON public.card_attachments
   FOR EACH ROW
   EXECUTE FUNCTION public.create_attachment_comment();
 
--- 11. CRIAR FUNÇÃO PARA COMENTÁRIO AUTOMÁTICO NO DELETE
+-- 11. CRIAR FUNÃ‡ÃƒO PARA COMENTÃRIO AUTOMÃTICO NO DELETE
 CREATE OR REPLACE FUNCTION public.create_attachment_deletion_comment()
 RETURNS TRIGGER AS $$
 DECLARE
   comment_content TEXT;
 BEGIN
-  -- Criar conteúdo do comentário de remoção
+  -- Criar conteÃºdo do comentÃ¡rio de remoÃ§Ã£o
   comment_content := format(
-    '🗑️ Anexo removido: %s',
+    'ðŸ—‘ï¸ Anexo removido: %s',
     OLD.file_name
   );
 
-  -- Adicionar detalhes do arquivo para referência
+  -- Adicionar detalhes do arquivo para referÃªncia
   comment_content := comment_content || format(
-    E'\n\n📊 Detalhes do arquivo removido:' ||
-    E'\n• Tipo: %s' ||
-    E'\n• Tamanho: %s bytes' ||
-    E'\n• Extensão: %s' ||
-    E'\n• Removido por: %s (%s)',
+    E'\n\nðŸ“Š Detalhes do arquivo removido:' ||
+    E'\nâ€¢ Tipo: %s' ||
+    E'\nâ€¢ Tamanho: %s bytes' ||
+    E'\nâ€¢ ExtensÃ£o: %s' ||
+    E'\nâ€¢ Removido por: %s (%s)',
     OLD.file_type,
     OLD.file_size,
     OLD.file_extension,
@@ -253,7 +253,7 @@ BEGIN
     OLD.author_role
   );
 
-  -- Inserir comentário de remoção na tabela card_comments
+  -- Inserir comentÃ¡rio de remoÃ§Ã£o na tabela card_comments
   INSERT INTO public.card_comments (
     card_id,
     author_id,
@@ -267,21 +267,21 @@ BEGIN
     OLD.author_name,
     OLD.author_role,
     comment_content,
-    0 -- Nível de comentário principal
+    0 -- NÃ­vel de comentÃ¡rio principal
   );
 
   RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
 
--- 12. CRIAR TRIGGER PARA COMENTÁRIO NO DELETE
+-- 12. CRIAR TRIGGER PARA COMENTÃRIO NO DELETE
 CREATE TRIGGER trg_create_attachment_deletion_comment
   AFTER DELETE ON public.card_attachments
   FOR EACH ROW
   EXECUTE FUNCTION public.create_attachment_deletion_comment();
 
--- 13. CRIAR FUNÇÕES AUXILIARES
--- Função para obter histórico de anexos
+-- 13. CRIAR FUNÃ‡Ã•ES AUXILIARES
+-- FunÃ§Ã£o para obter histÃ³rico de anexos
 CREATE OR REPLACE FUNCTION public.get_attachment_history(card_uuid UUID)
 RETURNS TABLE (
   id UUID,
@@ -299,30 +299,30 @@ BEGIN
   SELECT 
     cc.id,
     CASE 
-      WHEN cc.content LIKE '📎 Anexo adicionado:%' THEN 'uploaded'
-      WHEN cc.content LIKE '🗑️ Anexo removido:%' THEN 'deleted'
+      WHEN cc.content LIKE 'ðŸ“Ž Anexo adicionado:%' THEN 'uploaded'
+      WHEN cc.content LIKE 'ðŸ—‘ï¸ Anexo removido:%' THEN 'deleted'
       ELSE 'unknown'
     END as action,
     CASE 
-      WHEN cc.content LIKE '📎 Anexo adicionado:%' THEN 
-        TRIM(SPLIT_PART(SPLIT_PART(cc.content, '📎 Anexo adicionado: ', 2), E'\n', 1))
-      WHEN cc.content LIKE '🗑️ Anexo removido:%' THEN 
-        TRIM(SPLIT_PART(SPLIT_PART(cc.content, '🗑️ Anexo removido: ', 2), E'\n', 1))
+      WHEN cc.content LIKE 'ðŸ“Ž Anexo adicionado:%' THEN 
+        TRIM(SPLIT_PART(SPLIT_PART(cc.content, 'ðŸ“Ž Anexo adicionado: ', 2), E'\n', 1))
+      WHEN cc.content LIKE 'ðŸ—‘ï¸ Anexo removido:%' THEN 
+        TRIM(SPLIT_PART(SPLIT_PART(cc.content, 'ðŸ—‘ï¸ Anexo removido: ', 2), E'\n', 1))
       ELSE NULL
     END as file_name,
     CASE 
-      WHEN cc.content LIKE '%• Tipo: %' THEN 
-        TRIM(SPLIT_PART(SPLIT_PART(cc.content, '• Tipo: ', 2), E'\n', 1))
+      WHEN cc.content LIKE '%â€¢ Tipo: %' THEN 
+        TRIM(SPLIT_PART(SPLIT_PART(cc.content, 'â€¢ Tipo: ', 2), E'\n', 1))
       ELSE NULL
     END as file_type,
     CASE 
-      WHEN cc.content LIKE '%• Tamanho: %' THEN 
-        CAST(TRIM(SPLIT_PART(SPLIT_PART(cc.content, '• Tamanho: ', 2), ' bytes', 1)) AS BIGINT)
+      WHEN cc.content LIKE '%â€¢ Tamanho: %' THEN 
+        CAST(TRIM(SPLIT_PART(SPLIT_PART(cc.content, 'â€¢ Tamanho: ', 2), ' bytes', 1)) AS BIGINT)
       ELSE NULL
     END as file_size,
     CASE 
-      WHEN cc.content LIKE '%📝 Descrição: %' THEN 
-        TRIM(SPLIT_PART(SPLIT_PART(cc.content, '📝 Descrição: ', 2), E'\n\n', 1))
+      WHEN cc.content LIKE '%ðŸ“ DescriÃ§Ã£o: %' THEN 
+        TRIM(SPLIT_PART(SPLIT_PART(cc.content, 'ðŸ“ DescriÃ§Ã£o: ', 2), E'\n\n', 1))
       ELSE NULL
     END as description,
     cc.author_name,
@@ -330,12 +330,12 @@ BEGIN
     cc.created_at
   FROM public.card_comments cc
   WHERE cc.card_id = card_uuid
-    AND (cc.content LIKE '📎 Anexo adicionado:%' OR cc.content LIKE '🗑️ Anexo removido:%')
+    AND (cc.content LIKE 'ðŸ“Ž Anexo adicionado:%' OR cc.content LIKE 'ðŸ—‘ï¸ Anexo removido:%')
   ORDER BY cc.created_at DESC;
 END;
 $$ LANGUAGE plpgsql;
 
--- Função para obter anexos atuais com URLs de download
+-- FunÃ§Ã£o para obter anexos atuais com URLs de download
 CREATE OR REPLACE FUNCTION public.get_current_attachments(card_uuid UUID)
 RETURNS TABLE (
   id UUID,
@@ -368,19 +368,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 14. CONCEDER PERMISSÕES
+-- 14. CONCEDER PERMISSÃ•ES
 GRANT ALL ON public.card_attachments TO authenticated;
 GRANT ALL ON public.card_comments TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_attachment_history(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_current_attachments(UUID) TO authenticated;
 
--- 15. CRIAR ÍNDICE PARA COMENTÁRIOS DE ANEXOS
+-- 15. CRIAR ÃNDICE PARA COMENTÃRIOS DE ANEXOS
 CREATE INDEX IF NOT EXISTS idx_card_comments_attachment_actions 
 ON public.card_comments (card_id, created_at) 
-WHERE content LIKE '📎 Anexo adicionado:%' OR content LIKE '🗑️ Anexo removido:%';
+WHERE content LIKE 'ðŸ“Ž Anexo adicionado:%' OR content LIKE 'ðŸ—‘ï¸ Anexo removido:%';
 
 -- =====================================================
--- SCRIPT CONCLUÍDO
+-- SCRIPT CONCLUÃDO
 -- =====================================================
 -- Verifique se tudo foi criado corretamente executando:
 -- SELECT 'card_attachments table created' as status;

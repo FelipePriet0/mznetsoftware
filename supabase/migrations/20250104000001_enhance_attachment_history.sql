@@ -1,4 +1,4 @@
--- Enhance attachment history and add utility functions
+﻿-- Enhance attachment history and add utility functions
 -- This migration adds additional functions for better attachment management
 
 -- 1. Function to get attachment history for a card
@@ -19,30 +19,30 @@ BEGIN
   SELECT 
     cc.id,
     CASE 
-      WHEN cc.content LIKE '📎 Anexo adicionado:%' THEN 'uploaded'
-      WHEN cc.content LIKE '🗑️ Anexo removido:%' THEN 'deleted'
+      WHEN cc.content LIKE 'ðŸ“Ž Anexo adicionado:%' THEN 'uploaded'
+      WHEN cc.content LIKE 'ðŸ—‘ï¸ Anexo removido:%' THEN 'deleted'
       ELSE 'unknown'
     END as action,
     CASE 
-      WHEN cc.content LIKE '📎 Anexo adicionado:%' THEN 
-        TRIM(SPLIT_PART(SPLIT_PART(cc.content, '📎 Anexo adicionado: ', 2), E'\n', 1))
-      WHEN cc.content LIKE '🗑️ Anexo removido:%' THEN 
-        TRIM(SPLIT_PART(SPLIT_PART(cc.content, '🗑️ Anexo removido: ', 2), E'\n', 1))
+      WHEN cc.content LIKE 'ðŸ“Ž Anexo adicionado:%' THEN 
+        TRIM(SPLIT_PART(SPLIT_PART(cc.content, 'ðŸ“Ž Anexo adicionado: ', 2), E'\n', 1))
+      WHEN cc.content LIKE 'ðŸ—‘ï¸ Anexo removido:%' THEN 
+        TRIM(SPLIT_PART(SPLIT_PART(cc.content, 'ðŸ—‘ï¸ Anexo removido: ', 2), E'\n', 1))
       ELSE NULL
     END as file_name,
     CASE 
-      WHEN cc.content LIKE '%• Tipo: %' THEN 
-        TRIM(SPLIT_PART(SPLIT_PART(cc.content, '• Tipo: ', 2), E'\n', 1))
+      WHEN cc.content LIKE '%â€¢ Tipo: %' THEN 
+        TRIM(SPLIT_PART(SPLIT_PART(cc.content, 'â€¢ Tipo: ', 2), E'\n', 1))
       ELSE NULL
     END as file_type,
     CASE 
-      WHEN cc.content LIKE '%• Tamanho: %' THEN 
-        CAST(TRIM(SPLIT_PART(SPLIT_PART(cc.content, '• Tamanho: ', 2), ' bytes', 1)) AS BIGINT)
+      WHEN cc.content LIKE '%â€¢ Tamanho: %' THEN 
+        CAST(TRIM(SPLIT_PART(SPLIT_PART(cc.content, 'â€¢ Tamanho: ', 2), ' bytes', 1)) AS BIGINT)
       ELSE NULL
     END as file_size,
     CASE 
-      WHEN cc.content LIKE '%📝 Descrição: %' THEN 
-        TRIM(SPLIT_PART(SPLIT_PART(cc.content, '📝 Descrição: ', 2), E'\n\n', 1))
+      WHEN cc.content LIKE '%ðŸ“ DescriÃ§Ã£o: %' THEN 
+        TRIM(SPLIT_PART(SPLIT_PART(cc.content, 'ðŸ“ DescriÃ§Ã£o: ', 2), E'\n\n', 1))
       ELSE NULL
     END as description,
     cc.author_name,
@@ -50,7 +50,7 @@ BEGIN
     cc.created_at
   FROM public.card_comments cc
   WHERE cc.card_id = card_uuid
-    AND (cc.content LIKE '📎 Anexo adicionado:%' OR cc.content LIKE '🗑️ Anexo removido:%')
+    AND (cc.content LIKE 'ðŸ“Ž Anexo adicionado:%' OR cc.content LIKE 'ðŸ—‘ï¸ Anexo removido:%')
   ORDER BY cc.created_at DESC;
 END;
 $$ LANGUAGE plpgsql;
@@ -121,7 +121,7 @@ $$ LANGUAGE plpgsql;
 -- 4. Add index for better performance on attachment comments
 CREATE INDEX IF NOT EXISTS idx_card_comments_attachment_actions 
 ON public.card_comments (card_id, created_at) 
-WHERE content LIKE '📎 Anexo adicionado:%' OR content LIKE '🗑️ Anexo removido:%';
+WHERE content LIKE 'ðŸ“Ž Anexo adicionado:%' OR content LIKE 'ðŸ—‘ï¸ Anexo removido:%';
 
 -- 5. Add function to get attachment statistics for a card
 CREATE OR REPLACE FUNCTION public.get_attachment_stats(card_uuid UUID)

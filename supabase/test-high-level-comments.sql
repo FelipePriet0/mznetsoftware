@@ -1,4 +1,4 @@
--- Script para testar inserção de comentários de nível alto
+﻿-- Script para testar inserÃ§Ã£o de comentÃ¡rios de nÃ­vel alto
 -- Execute este script no Supabase SQL Editor
 
 -- 1. VERIFICAR ESTRUTURA ATUAL
@@ -12,9 +12,9 @@ WHERE table_name = 'card_comments'
 AND table_schema = 'public'
 ORDER BY ordinal_position;
 
--- 2. VERIFICAR COMENTÁRIOS EXISTENTES E SEUS NÍVEIS
+-- 2. VERIFICAR COMENTÃRIOS EXISTENTES E SEUS NÃVEIS
 SELECT 
-  'Comentários existentes' as info,
+  'ComentÃ¡rios existentes' as info,
   id,
   content,
   level,
@@ -25,24 +25,24 @@ FROM public.card_comments
 ORDER BY created_at DESC 
 LIMIT 10;
 
--- 3. TESTE DE INSERÇÃO DE NÍVEL ALTO
+-- 3. TESTE DE INSERÃ‡ÃƒO DE NÃVEL ALTO
 DO $$
 DECLARE
   test_card_id UUID;
   test_parent_id UUID;
   test_comment_id UUID;
-  test_level INTEGER := 4; -- Testar nível 4
+  test_level INTEGER := 4; -- Testar nÃ­vel 4
 BEGIN
   -- Pegar um card existente
   SELECT id INTO test_card_id FROM public.kanban_cards LIMIT 1;
   
-  -- Pegar um comentário existente como pai
+  -- Pegar um comentÃ¡rio existente como pai
   SELECT id INTO test_parent_id FROM public.card_comments WHERE level = 2 LIMIT 1;
   
   IF test_card_id IS NOT NULL THEN
-    RAISE NOTICE 'Testando inserção de comentário nível %...', test_level;
+    RAISE NOTICE 'Testando inserÃ§Ã£o de comentÃ¡rio nÃ­vel %...', test_level;
     
-    -- Tentar inserir comentário de nível alto
+    -- Tentar inserir comentÃ¡rio de nÃ­vel alto
     INSERT INTO public.card_comments (
       card_id,
       author_id,
@@ -54,27 +54,27 @@ BEGIN
       thread_id
     ) VALUES (
       test_card_id,
-      '00000000-0000-0000-0000-000000000000', -- ID fictício
+      '00000000-0000-0000-0000-000000000000', -- ID fictÃ­cio
       'Teste Sistema',
       'teste',
-      'Teste de nível ' || test_level,
+      'Teste de nÃ­vel ' || test_level,
       test_level,
       test_parent_id,
       'test-thread-' || extract(epoch from now())::text
     ) RETURNING id INTO test_comment_id;
     
     IF test_comment_id IS NOT NULL THEN
-      RAISE NOTICE 'SUCESSO: Comentário nível % inserido com ID: %', test_level, test_comment_id;
+      RAISE NOTICE 'SUCESSO: ComentÃ¡rio nÃ­vel % inserido com ID: %', test_level, test_comment_id;
       
       -- Verificar se foi realmente inserido
       SELECT level INTO test_level FROM public.card_comments WHERE id = test_comment_id;
-      RAISE NOTICE 'Verificação: Comentário inserido com nível %', test_level;
+      RAISE NOTICE 'VerificaÃ§Ã£o: ComentÃ¡rio inserido com nÃ­vel %', test_level;
       
-      -- Remover o comentário de teste
+      -- Remover o comentÃ¡rio de teste
       DELETE FROM public.card_comments WHERE id = test_comment_id;
-      RAISE NOTICE 'Comentário de teste removido';
+      RAISE NOTICE 'ComentÃ¡rio de teste removido';
     ELSE
-      RAISE NOTICE 'ERRO: Falha ao inserir comentário nível %', test_level;
+      RAISE NOTICE 'ERRO: Falha ao inserir comentÃ¡rio nÃ­vel %', test_level;
     END IF;
   ELSE
     RAISE NOTICE 'ERRO: Nenhum card encontrado para teste';
@@ -90,9 +90,9 @@ SELECT
 FROM pg_constraint 
 WHERE conrelid = 'public.card_comments'::regclass;
 
--- 5. VERIFICAR POLÍTICAS RLS
+-- 5. VERIFICAR POLÃTICAS RLS
 SELECT 
-  'Políticas RLS' as info,
+  'PolÃ­ticas RLS' as info,
   policyname,
   cmd,
   permissive,

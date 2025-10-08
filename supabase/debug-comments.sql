@@ -1,4 +1,4 @@
--- Script para debugar problemas com respostas em níveis profundos
+﻿-- Script para debugar problemas com respostas em nÃ­veis profundos
 
 -- 1. Verificar estrutura da tabela card_comments
 SELECT column_name, data_type, is_nullable, column_default
@@ -6,7 +6,7 @@ FROM information_schema.columns
 WHERE table_name = 'card_comments' 
 ORDER BY ordinal_position;
 
--- 2. Verificar todos os comentários com suas hierarquias
+-- 2. Verificar todos os comentÃ¡rios com suas hierarquias
 SELECT 
     id,
     card_id,
@@ -30,7 +30,7 @@ ORDER BY
     level, 
     created_at;
 
--- 3. Verificar se há problemas com thread_id
+-- 3. Verificar se hÃ¡ problemas com thread_id
 SELECT 
     thread_id,
     COUNT(*) as comment_count,
@@ -41,7 +41,7 @@ FROM card_comments
 GROUP BY thread_id
 ORDER BY thread_id;
 
--- 4. Verificar comentários órfãos (sem thread_id ou com thread_id inválido)
+-- 4. Verificar comentÃ¡rios Ã³rfÃ£os (sem thread_id ou com thread_id invÃ¡lido)
 SELECT 
     id,
     author_name,
@@ -54,7 +54,7 @@ WHERE thread_id IS NULL
    OR thread_id NOT IN (SELECT DISTINCT COALESCE(thread_id, id) FROM card_comments)
 ORDER BY created_at;
 
--- 5. Verificar se há comentários com level > 7 (que deveriam estar bloqueados)
+-- 5. Verificar se hÃ¡ comentÃ¡rios com level > 7 (que deveriam estar bloqueados)
 SELECT 
     id,
     author_name,

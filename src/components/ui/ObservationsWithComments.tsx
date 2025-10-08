@@ -107,6 +107,16 @@ export function ObservationsWithComments({
       console.log('🔍 DEBUG: Chamando deleteComment...');
       const result = await deleteComment(commentId);
       console.log('🔍 DEBUG: deleteComment resultado:', result);
+      
+      // IMPORTANTE: Recarregar comentários do banco após exclusão
+      // para garantir sincronização com o estado real
+      if (result && onRefetch) {
+        console.log('🔍 DEBUG: Chamando onRefetch para recarregar comentários...');
+        setTimeout(() => {
+          onRefetch();
+        }, 100);
+      }
+      
       return result;
     } catch (error) {
       console.error('🚨 ERRO em handleDelete:', error);

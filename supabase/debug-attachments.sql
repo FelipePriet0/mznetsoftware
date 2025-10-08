@@ -1,4 +1,4 @@
--- DEBUG: VERIFICAR ANEXOS NO STORAGE E TABELA
+﻿-- DEBUG: VERIFICAR ANEXOS NO STORAGE E TABELA
 -- Execute este SQL para diagnosticar o problema
 
 -- 1. VERIFICAR ARQUIVOS NO STORAGE
@@ -26,7 +26,7 @@ FROM public.card_attachments
 ORDER BY created_at DESC
 LIMIT 10;
 
--- 3. VERIFICAR COMENTÁRIOS DE ANEXO
+-- 3. VERIFICAR COMENTÃRIOS DE ANEXO
 SELECT 
     id,
     card_id,
@@ -34,11 +34,11 @@ SELECT
     created_at,
     author_name
 FROM public.card_comments
-WHERE content LIKE '%📎 Anexo adicionado%'
+WHERE content LIKE '%ðŸ“Ž Anexo adicionado%'
 ORDER BY created_at DESC
 LIMIT 5;
 
--- 4. VERIFICAR CONFIGURAÇÃO DO BUCKET
+-- 4. VERIFICAR CONFIGURAÃ‡ÃƒO DO BUCKET
 SELECT 
     id,
     name,

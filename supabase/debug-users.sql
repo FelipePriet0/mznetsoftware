@@ -1,10 +1,10 @@
--- =====================================================
--- DEBUG: Verificar se os usuários estão sendo carregados
+﻿-- =====================================================
+-- DEBUG: Verificar se os usuÃ¡rios estÃ£o sendo carregados
 -- =====================================================
 
--- 1. Verificar todos os usuários cadastrados
+-- 1. Verificar todos os usuÃ¡rios cadastrados
 SELECT 
-  'Usuários cadastrados' as info,
+  'UsuÃ¡rios cadastrados' as info,
   id,
   full_name,
   role,
@@ -13,9 +13,9 @@ SELECT
 FROM public.profiles
 ORDER BY role, full_name;
 
--- 2. Verificar se há usuários com dados incompletos
+-- 2. Verificar se hÃ¡ usuÃ¡rios com dados incompletos
 SELECT 
-  'Usuários com dados incompletos' as info,
+  'UsuÃ¡rios com dados incompletos' as info,
   COUNT(*) as count
 FROM public.profiles
 WHERE full_name IS NULL 
@@ -23,9 +23,9 @@ WHERE full_name IS NULL
    OR role IS NULL
    OR role = '';
 
--- 3. Verificar quantos usuários temos por role
+-- 3. Verificar quantos usuÃ¡rios temos por role
 SELECT 
-  'Usuários por role' as info,
+  'UsuÃ¡rios por role' as info,
   role,
   COUNT(*) as count
 FROM public.profiles
@@ -41,9 +41,9 @@ SELECT
 FROM pg_tables
 WHERE tablename = 'profiles';
 
--- 5. Verificar políticas RLS da tabela profiles
+-- 5. Verificar polÃ­ticas RLS da tabela profiles
 SELECT 
-  'Políticas RLS da tabela profiles' as info,
+  'PolÃ­ticas RLS da tabela profiles' as info,
   policyname,
   cmd,
   permissive,
@@ -69,12 +69,12 @@ DECLARE
 BEGIN
   SELECT COUNT(*) INTO user_count FROM public.profiles;
   
-  RAISE NOTICE '🔍 Debug dos usuários executado!';
-  RAISE NOTICE '📊 Total de usuários: %', user_count;
+  RAISE NOTICE 'ðŸ” Debug dos usuÃ¡rios executado!';
+  RAISE NOTICE 'ðŸ“Š Total de usuÃ¡rios: %', user_count;
   
   IF user_count = 0 THEN
-    RAISE NOTICE '❌ Nenhum usuário encontrado! Verifique se a tabela profiles tem dados.';
+    RAISE NOTICE 'âŒ Nenhum usuÃ¡rio encontrado! Verifique se a tabela profiles tem dados.';
   ELSE
-    RAISE NOTICE '✅ Usuários encontrados! Verifique os resultados acima.';
+    RAISE NOTICE 'âœ… UsuÃ¡rios encontrados! Verifique os resultados acima.';
   END IF;
 END $$;

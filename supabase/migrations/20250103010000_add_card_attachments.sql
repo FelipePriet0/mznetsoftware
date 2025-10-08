@@ -1,4 +1,4 @@
--- Create card_attachments table for file attachments in Kanban cards
+﻿-- Create card_attachments table for file attachments in Kanban cards
 CREATE TABLE IF NOT EXISTS public.card_attachments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   card_id uuid NOT NULL REFERENCES public.kanban_cards(id) ON DELETE CASCADE,

@@ -1,5 +1,5 @@
--- =====================================================
--- DEBUG: Verificar se as tarefas estão sendo criadas corretamente
+﻿-- =====================================================
+-- DEBUG: Verificar se as tarefas estÃ£o sendo criadas corretamente
 -- =====================================================
 
 -- 1. Verificar se a tabela card_tasks existe e tem dados
@@ -25,14 +25,14 @@ FROM public.card_tasks
 ORDER BY created_at DESC 
 LIMIT 10;
 
--- 3. Verificar se há tarefas vinculadas a comentários
+-- 3. Verificar se hÃ¡ tarefas vinculadas a comentÃ¡rios
 SELECT 
   'Tarefas com comment_id' as info,
   COUNT(*) as count
 FROM public.card_tasks 
 WHERE comment_id IS NOT NULL;
 
--- 4. Verificar políticas RLS ativas
+-- 4. Verificar polÃ­ticas RLS ativas
 SELECT 
   schemaname,
   tablename,
@@ -45,7 +45,7 @@ FROM pg_policies
 WHERE tablename = 'card_tasks'
 ORDER BY policyname;
 
--- 5. Verificar se o trigger está funcionando (card_title preenchido)
+-- 5. Verificar se o trigger estÃ¡ funcionando (card_title preenchido)
 SELECT 
   'Tarefas com card_title' as info,
   COUNT(*) as count
@@ -55,5 +55,5 @@ WHERE card_title IS NOT NULL;
 -- 6. Log de debug
 DO $$
 BEGIN
-  RAISE NOTICE '🔍 Debug das tarefas executado! Verifique os resultados acima.';
+  RAISE NOTICE 'ðŸ” Debug das tarefas executado! Verifique os resultados acima.';
 END $$;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Comment } from '@/components/comments/CommentItem';
 import { toast } from '@/hooks/use-toast';
@@ -23,7 +23,7 @@ export function useComments(cardId: string) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Extrair @menções do texto
+  // Extrair @menÃ§Ãµes do texto
   const extractMentions = (text: string): string[] => {
     const mentionRegex = /@(\w+)/g;
     const mentions: string[] = [];
@@ -36,7 +36,7 @@ export function useComments(cardId: string) {
     return [...new Set(mentions)]; // Remove duplicatas
   };
 
-  // Enviar notificações
+  // Enviar notificaÃ§Ãµes
   const sendNotifications = async (content: string, authorId: string, parentComment?: Comment) => {
     try {
       const mentions = extractMentions(content);
@@ -45,16 +45,16 @@ export function useComments(cardId: string) {
       if (parentComment && parentComment.authorId !== authorId) {
         toast({
           title: "Nova resposta",
-          description: `Você recebeu uma resposta em um comentário`,
+          description: `VocÃª recebeu uma resposta em um comentÃ¡rio`,
           variant: "default"
         });
       }
 
-      // Notificar usuários mencionados
+      // Notificar usuÃ¡rios mencionados
       for (const mention of mentions) {
         toast({
-          title: "Você foi mencionado",
-          description: `Você foi mencionado em um comentário: @${mention}`,
+          title: "VocÃª foi mencionado",
+          description: `VocÃª foi mencionado em um comentÃ¡rio: @${mention}`,
           variant: "default"
         });
       }
@@ -63,7 +63,7 @@ export function useComments(cardId: string) {
     }
   };
 
-  // Carregar comentários do card
+  // Carregar comentÃ¡rios do card
   const loadComments = useCallback(async () => {
     if (!cardId) return;
     
@@ -88,9 +88,10 @@ export function useComments(cardId: string) {
           thread_id
         `)
         .eq('card_id', cardId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: true });
 
-      // Se erro por thread_id não existir, tentar sem essa coluna
+      // Se erro por thread_id nÃ£o existir, tentar sem essa coluna
       if (error && error.code === 'PGRST204' && error.message?.includes('thread_id')) {
         console.warn('thread_id column not found - loading without thread_id');
         const result = await (supabase as any)
@@ -108,6 +109,7 @@ export function useComments(cardId: string) {
             level
           `)
           .eq('card_id', cardId)
+          .is('deleted_at', null)
           .order('created_at', { ascending: true });
         
         data = result.data;
@@ -136,25 +138,25 @@ export function useComments(cardId: string) {
         updatedAt: row.updated_at,
         parentId: row.parent_id,
         level: row.level || 0,
-        threadId: row.thread_id || row.id // Usar thread_id do banco ou o próprio ID como fallback
+        threadId: row.thread_id || row.id // Usar thread_id do banco ou o prÃ³prio ID como fallback
       }));
 
       setComments(mappedComments);
     } catch (err: any) {
       console.error('Error loading comments:', err);
-      setError(err.message || 'Erro ao carregar comentários');
-      // Em caso de erro, definir comentários vazios para não quebrar a UI
+      setError(err.message || 'Erro ao carregar comentÃ¡rios');
+      // Em caso de erro, definir comentÃ¡rios vazios para nÃ£o quebrar a UI
       setComments([]);
     } finally {
       setIsLoading(false);
     }
   }, [cardId]);
 
-  // Criar novo comentário
+  // Criar novo comentÃ¡rio
   const createComment = async (data: CreateCommentData): Promise<Comment | null> => {
-    console.log('🔍 DEBUG useComments: createComment chamado com:', data);
+    console.log('ðŸ” DEBUG useComments: createComment chamado com:', data);
     try {
-      // Preparar dados para inserção (sem thread_id se não existir)
+      // Preparar dados para inserÃ§Ã£o (sem thread_id se nÃ£o existir)
       const insertData: any = {
         card_id: data.cardId,
         author_id: data.authorId,
@@ -165,7 +167,7 @@ export function useComments(cardId: string) {
         level: data.level
       };
 
-      // Incluir thread_id se disponível
+      // Incluir thread_id se disponÃ­vel
       const insertDataWithThreadId = {
         card_id: data.cardId,
         author_id: data.authorId,
@@ -177,8 +179,8 @@ export function useComments(cardId: string) {
         thread_id: data.threadId || null
       };
 
-      console.log('🔍 DEBUG: Tentando inserir no banco (com thread_id):', insertDataWithThreadId);
-      console.log('🔍 DEBUG: Tipo de dados sendo inseridos:', {
+      console.log('ðŸ” DEBUG: Tentando inserir no banco (com thread_id):', insertDataWithThreadId);
+      console.log('ðŸ” DEBUG: Tipo de dados sendo inseridos:', {
         levelType: typeof insertDataWithThreadId.level,
         levelValue: insertDataWithThreadId.level,
         parentIdType: typeof insertDataWithThreadId.parent_id,
@@ -193,7 +195,7 @@ export function useComments(cardId: string) {
         .select()
         .single();
         
-      console.log('🔍 DEBUG: Resultado da inserção:', { 
+      console.log('ðŸ” DEBUG: Resultado da inserÃ§Ã£o:', { 
         result, 
         error,
         success: !!result && !error,
@@ -204,13 +206,13 @@ export function useComments(cardId: string) {
       });
 
       if (error) {
-        console.log('🚨 ERRO no createComment:', error);
+        console.log('ðŸš¨ ERRO no createComment:', error);
         if (error.code === 'PGRST205' || error.message?.includes('schema cache') || error.message?.includes('relation "public.card_comments" does not exist')) {
           console.warn('Card comments table not found - feature may not be available yet');
           return null;
         }
         
-        // Se erro por thread_id não existir, tentar sem thread_id
+        // Se erro por thread_id nÃ£o existir, tentar sem thread_id
         if (error.code === 'PGRST204' && error.message?.includes('thread_id')) {
           console.warn('thread_id column not found - trying without thread_id');
           const insertDataWithoutThreadId = {
@@ -244,10 +246,10 @@ export function useComments(cardId: string) {
             updatedAt: result2.updated_at,
             parentId: result2.parent_id,
             level: result2.level,
-            threadId: result2.id // Usar o próprio ID como thread_id
+            threadId: result2.id // Usar o prÃ³prio ID como thread_id
           };
           
-          console.log('🔍 DEBUG useComments: Comentário criado sem thread_id:', newComment);
+          console.log('ðŸ” DEBUG useComments: ComentÃ¡rio criado sem thread_id:', newComment);
           setComments(prev => [...prev, newComment]);
           
           return newComment;
@@ -267,38 +269,38 @@ export function useComments(cardId: string) {
         updatedAt: result.updated_at,
         parentId: result.parent_id,
         level: result.level,
-        threadId: result.thread_id || result.id // Usar thread_id do banco ou o próprio ID como fallback
+        threadId: result.thread_id || result.id // Usar thread_id do banco ou o prÃ³prio ID como fallback
       };
 
-      console.log('🔍 DEBUG useComments: Comentário criado com sucesso:', newComment);
+      console.log('ðŸ” DEBUG useComments: ComentÃ¡rio criado com sucesso:', newComment);
       
-      // Verificar se o comentário já existe na lista antes de adicionar
+      // Verificar se o comentÃ¡rio jÃ¡ existe na lista antes de adicionar
       setComments(prev => {
         const exists = prev.find(c => c.id === newComment.id);
         if (exists) {
-          console.log('🔍 DEBUG: Comentário já existe na lista, atualizando...');
+          console.log('ðŸ” DEBUG: ComentÃ¡rio jÃ¡ existe na lista, atualizando...');
           return prev.map(c => c.id === newComment.id ? newComment : c);
         } else {
-          console.log('🔍 DEBUG: Adicionando novo comentário à lista...');
+          console.log('ðŸ” DEBUG: Adicionando novo comentÃ¡rio Ã  lista...');
           return [...prev, newComment];
         }
       });
       
-      console.log('🔍 DEBUG useComments: Estado de comentários atualizado');
+      console.log('ðŸ” DEBUG useComments: Estado de comentÃ¡rios atualizado');
       
-      // Enviar notificações
+      // Enviar notificaÃ§Ãµes
       const parentComment = data.parentId ? comments.find(c => c.id === data.parentId) : undefined;
       await sendNotifications(data.content, data.authorId, parentComment);
       
       return newComment;
     } catch (err: any) {
       console.error('Error creating comment:', err);
-      setError(err.message || 'Erro ao criar comentário');
+      setError(err.message || 'Erro ao criar comentÃ¡rio');
       return null;
     }
   };
 
-  // Atualizar comentário
+  // Atualizar comentÃ¡rio
   const updateComment = async (commentId: string, data: UpdateCommentData): Promise<boolean> => {
     try {
       const { error } = await (supabase as any)
@@ -328,27 +330,37 @@ export function useComments(cardId: string) {
       return true;
     } catch (err: any) {
       console.error('Error updating comment:', err);
-      setError(err.message || 'Erro ao atualizar comentário');
+      setError(err.message || 'Erro ao atualizar comentÃ¡rio');
       return false;
     }
   };
 
-  // Deletar comentário
+  // Deletar comentÃ¡rio
   const deleteComment = async (commentId: string): Promise<boolean> => {
     try {
-      // Primeiro, deletar todas as respostas (comentários filhos)
+      console.log('ðŸ—‘ï¸ [useComments] Iniciando exclusÃ£o do comentÃ¡rio:', commentId);
+      
+      // Primeiro, deletar todas as respostas (comentÃ¡rios filhos)
       const childComments = comments.filter(c => c.parentId === commentId);
+      console.log('ðŸ—‘ï¸ [useComments] ComentÃ¡rios filhos encontrados:', childComments.length);
+      
       for (const child of childComments) {
+        console.log('ðŸ—‘ï¸ [useComments] Deletando filho:', child.id);
         await deleteComment(child.id);
       }
 
-      // Depois, deletar o comentário principal
+      // Depois, fazer SOFT DELETE do comentÃ¡rio principal (nÃ£o deleta permanentemente!)
+      console.log('ðŸ—‘ï¸ [useComments] Soft delete do comentÃ¡rio principal:', commentId);
       const { error } = await (supabase as any)
         .from('card_comments')
-        .delete()
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: (await supabase.auth.getUser()).data.user?.id
+        })
         .eq('id', commentId);
 
       if (error) {
+        console.error('ðŸ—‘ï¸ [useComments] Erro ao deletar do banco:', error);
         if (error.code === 'PGRST205' || error.message?.includes('schema cache') || error.message?.includes('relation "public.card_comments" does not exist')) {
           console.warn('Card comments table not found - feature may not be available yet');
           return false;
@@ -356,16 +368,22 @@ export function useComments(cardId: string) {
         throw error;
       }
 
-      setComments(prev => prev.filter(comment => comment.id !== commentId));
+      console.log('ðŸ—‘ï¸ [useComments] ComentÃ¡rio deletado do banco com sucesso!');
+      
+      // FORÃ‡A RECARREGAMENTO DO BANCO (ignorar cache local)
+      console.log('ðŸ”„ [useComments] ForÃ§ando recarregamento completo do banco...');
+      await loadComments();
+      
+      console.log('âœ… [useComments] ExclusÃ£o e recarregamento concluÃ­dos com sucesso');
       return true;
     } catch (err: any) {
-      console.error('Error deleting comment:', err);
-      setError(err.message || 'Erro ao deletar comentário');
+      console.error('ðŸ—‘ï¸ [useComments] Erro ao deletar comentÃ¡rio:', err);
+      setError(err.message || 'Erro ao deletar comentÃ¡rio');
       return false;
     }
   };
 
-  // Criar resposta a um comentário
+  // Criar resposta a um comentÃ¡rio
   const replyToComment = async (
     parentId: string, 
     content: string, 
@@ -373,7 +391,7 @@ export function useComments(cardId: string) {
     authorName: string, 
     authorRole?: string
   ): Promise<Comment | null> => {
-    console.log('🔍 DEBUG replyToComment chamado:', {
+    console.log('ðŸ” DEBUG replyToComment chamado:', {
       parentId,
       content,
       authorId,
@@ -382,8 +400,8 @@ export function useComments(cardId: string) {
     });
 
     const parentComment = comments.find(c => c.id === parentId);
-    console.log('🔍 DEBUG parentComment encontrado:', parentComment);
-    console.log('🔍 DEBUG todos os comentários disponíveis:', comments.map(c => ({
+    console.log('ðŸ” DEBUG parentComment encontrado:', parentComment);
+    console.log('ðŸ” DEBUG todos os comentÃ¡rios disponÃ­veis:', comments.map(c => ({
       id: c.id,
       level: c.level,
       threadId: c.threadId,
@@ -392,31 +410,31 @@ export function useComments(cardId: string) {
     })));
     
     if (!parentComment) {
-      console.error('🚨 ERRO: Comentário pai não encontrado');
-      setError('Comentário pai não encontrado');
+      console.error('ðŸš¨ ERRO: ComentÃ¡rio pai nÃ£o encontrado');
+      setError('ComentÃ¡rio pai nÃ£o encontrado');
       return null;
     }
 
-    // Limite de 7 níveis conforme solicitado
+    // Limite de 7 nÃ­veis conforme solicitado
     const MAX_LEVEL = 7;
     const newLevel = parentComment.level + 1; // Sem Math.min por enquanto
     const threadId = parentComment.threadId || parentComment.id;
     
-    console.log('🔍 DEBUG LEVEL CALCULATION:', {
+    console.log('ðŸ” DEBUG LEVEL CALCULATION:', {
       parentLevel: parentComment.level,
       newLevel,
       maxLevel: MAX_LEVEL,
       willExceedLimit: newLevel >= MAX_LEVEL
     });
     
-    // Verificar se já atingiu o limite
+    // Verificar se jÃ¡ atingiu o limite
     if (newLevel >= MAX_LEVEL) {
-      console.warn('🚨 LIMITE ATINGIDO: Máximo de respostas por conversa');
-      setError(`Limite máximo de ${MAX_LEVEL} respostas por conversa atingido`);
+      console.warn('ðŸš¨ LIMITE ATINGIDO: MÃ¡ximo de respostas por conversa');
+      setError(`Limite mÃ¡ximo de ${MAX_LEVEL} respostas por conversa atingido`);
       return null;
     }
     
-    console.log('🔍 DEBUG dados para createComment:', {
+    console.log('ðŸ” DEBUG dados para createComment:', {
       cardId,
       authorId,
       authorName,
@@ -439,11 +457,11 @@ export function useComments(cardId: string) {
       threadId: threadId // IMPORTANTE: Passar o thread_id para manter a mesma conversa
     });
     
-    console.log('🔍 DEBUG replyToComment resultado:', result);
+    console.log('ðŸ” DEBUG replyToComment resultado:', result);
     return result;
   };
 
-  // Carregar comentários quando o cardId mudar
+  // Carregar comentÃ¡rios quando o cardId mudar
   useEffect(() => {
     loadComments();
   }, [loadComments]);

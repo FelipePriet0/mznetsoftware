@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -28,7 +28,7 @@ export interface UploadAttachmentData {
   customFileName?: string;
 }
 
-// Função standalone para buscar URL de download (pode ser usada fora do hook)
+// FunÃ§Ã£o standalone para buscar URL de download (pode ser usada fora do hook)
 export async function getDownloadUrl(filePath: string): Promise<string | null> {
   try {
     console.log('=== DEBUGGING DOWNLOAD ===');
@@ -71,10 +71,10 @@ export async function getDownloadUrl(filePath: string): Promise<string | null> {
     // Testar se o arquivo existe
     const response = await fetch(originalUrl.publicUrl, { method: 'HEAD' });
     if (response.ok) {
-      console.log('✅ File found with original path:', filePath);
+      console.log('âœ… File found with original path:', filePath);
       return originalUrl.publicUrl;
     } else {
-      console.log('❌ File not found with original path:', filePath);
+      console.log('âŒ File not found with original path:', filePath);
       console.log('File not found with original path, trying alternatives...');
     }
 
@@ -84,14 +84,14 @@ export async function getDownloadUrl(filePath: string): Promise<string | null> {
       return alternativeUrl;
     }
 
-    // Se ainda não encontrou, tentar buscar por padrão similar nos arquivos
+    // Se ainda nÃ£o encontrou, tentar buscar por padrÃ£o similar nos arquivos
     console.log('Trying to find file by pattern matching...');
     const fileName = filePath.split('/').pop();
     const cardName = filePath.split('/')[0];
     
     // Buscar arquivos que contenham partes do nome
     const matchingFiles = allFiles.filter(file => {
-      // Pular arquivos que são apenas pastas ou placeholders
+      // Pular arquivos que sÃ£o apenas pastas ou placeholders
       if (file.name === 'card-attachments' || file.name.includes('.emptyFolderPlaceholder')) {
         return false;
       }
@@ -100,7 +100,7 @@ export async function getDownloadUrl(filePath: string): Promise<string | null> {
       const fileNameLower = fileName.toLowerCase();
       const cardNameLower = cardName.toLowerCase();
       
-      // Limpar caracteres especiais para comparação
+      // Limpar caracteres especiais para comparaÃ§Ã£o
       const cleanFileName = fileNameLower.replace(/[^a-zA-Z0-9]/g, '');
       const cleanCardName = cardNameLower.replace(/[^a-zA-Z0-9]/g, '');
       
@@ -128,7 +128,7 @@ export async function getDownloadUrl(filePath: string): Promise<string | null> {
       return data.publicUrl;
     }
 
-    // Se não encontrou por pattern matching, tentar buscar manualmente baseado nos arquivos conhecidos
+    // Se nÃ£o encontrou por pattern matching, tentar buscar manualmente baseado nos arquivos conhecidos
     console.log('No pattern match found, trying manual search...');
     const knownFiles = [
       'card-attachments/ANTONIO_BOZUTT/FICHA_CNPJ___2__ANTONIO_BOZUTT_2025-10-06_9zebdg.pdf',
@@ -147,15 +147,15 @@ export async function getDownloadUrl(filePath: string): Promise<string | null> {
         console.log(`Testing known file: ${knownFile} -> ${data.publicUrl}`);
         const response = await fetch(data.publicUrl, { method: 'HEAD' });
         if (response.ok) {
-          console.log('✅ Found file with known path:', knownFile);
+          console.log('âœ… Found file with known path:', knownFile);
           return data.publicUrl;
         }
       } catch (error) {
-        console.log(`❌ Known file ${knownFile} failed:`, error);
+        console.log(`âŒ Known file ${knownFile} failed:`, error);
       }
     }
 
-    // Para bucket público, usar getPublicUrl
+    // Para bucket pÃºblico, usar getPublicUrl
     const { data } = supabase.storage
       .from('card-attachments')
       .getPublicUrl(filePath);
@@ -168,7 +168,7 @@ export async function getDownloadUrl(filePath: string): Promise<string | null> {
   }
 }
 
-// Função para listar todos os arquivos (para debug)
+// FunÃ§Ã£o para listar todos os arquivos (para debug)
 async function listAllFiles() {
   try {
     const { data, error } = await supabase.storage
@@ -193,16 +193,16 @@ async function listAllFiles() {
   }
 }
 
-// Função para tentar encontrar arquivo com diferentes caminhos
+// FunÃ§Ã£o para tentar encontrar arquivo com diferentes caminhos
 async function findFileWithAlternativePaths(originalPath: string) {
   const fileName = originalPath.split('/').pop();
   const cardName = originalPath.split('/')[0];
   
-  // Baseado nos arquivos reais que vimos, gerar variações mais precisas
+  // Baseado nos arquivos reais que vimos, gerar variaÃ§Ãµes mais precisas
   const sanitizedCardName = cardName.replace(/[^a-zA-Z0-9_-]/g, '_');
   const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9_.-]/g, '_');
   
-  // Gerar diferentes variações do caminho baseado nos arquivos que vimos
+  // Gerar diferentes variaÃ§Ãµes do caminho baseado nos arquivos que vimos
   const paths = [
     originalPath, // Caminho original
     fileName, // Apenas o nome do arquivo
@@ -226,16 +226,16 @@ async function findFileWithAlternativePaths(originalPath: string) {
       
       console.log(`Testing path: ${path} -> ${data.publicUrl}`);
       
-      // Testar se a URL é válida fazendo uma requisição HEAD
+      // Testar se a URL Ã© vÃ¡lida fazendo uma requisiÃ§Ã£o HEAD
       const response = await fetch(data.publicUrl, { method: 'HEAD' });
       if (response.ok) {
-        console.log('✅ Found file at path:', path);
+        console.log('âœ… Found file at path:', path);
         return data.publicUrl;
       } else {
-        console.log(`❌ Path ${path} returned ${response.status}`);
+        console.log(`âŒ Path ${path} returned ${response.status}`);
       }
     } catch (error) {
-      console.log(`❌ Path ${path} failed:`, error);
+      console.log(`âŒ Path ${path} failed:`, error);
     }
   }
   
@@ -260,6 +260,7 @@ export function useAttachments(cardId: string) {
         .from('card_attachments')
         .select('*')
         .eq('card_id', cardId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: true });
 
       if (error) {
@@ -278,7 +279,7 @@ export function useAttachments(cardId: string) {
       if (error.code !== 'PGRST205' && !error.message?.includes('schema cache')) {
         toast({
           title: "Erro ao carregar anexos",
-          description: error.message || "Não foi possível carregar os anexos",
+          description: error.message || "NÃ£o foi possÃ­vel carregar os anexos",
           variant: "destructive"
         });
       }
@@ -291,7 +292,7 @@ export function useAttachments(cardId: string) {
   // Upload a new attachment
   const uploadAttachment = async ({ file, description, commentId, customFileName }: UploadAttachmentData): Promise<CardAttachment | null> => {
     // Debug: verificar valores
-    console.log('🔍 DEBUG uploadAttachment:', {
+    console.log('ðŸ” DEBUG uploadAttachment:', {
       cardId,
       profile,
       currentUserName,
@@ -303,26 +304,26 @@ export function useAttachments(cardId: string) {
     });
 
     if (!cardId) {
-      console.error('❌ Missing cardId for upload');
+      console.error('âŒ Missing cardId for upload');
       toast({
         title: "Erro",
-        description: "ID do card não encontrado",
+        description: "ID do card nÃ£o encontrado",
         variant: "destructive"
       });
       return null;
     }
 
-    // Se não tiver profile, tentar buscar direto do Supabase
+    // Se nÃ£o tiver profile, tentar buscar direto do Supabase
     let authorId = profile?.id;
-    let authorName = currentUserName || profile?.full_name || 'Usuário';
+    let authorName = currentUserName || profile?.full_name || 'UsuÃ¡rio';
 
     if (!authorId) {
-      console.warn('⚠️ Profile não disponível, buscando do Supabase...');
+      console.warn('âš ï¸ Profile nÃ£o disponÃ­vel, buscando do Supabase...');
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           authorId = user.id;
-          console.log('✅ User ID obtido do Supabase:', authorId);
+          console.log('âœ… User ID obtido do Supabase:', authorId);
           
           // Tentar buscar o nome do perfil
           const { data: profileData } = await (supabase as any)
@@ -333,19 +334,19 @@ export function useAttachments(cardId: string) {
           
           if (profileData?.full_name) {
             authorName = profileData.full_name;
-            console.log('✅ Nome do usuário obtido:', authorName);
+            console.log('âœ… Nome do usuÃ¡rio obtido:', authorName);
           }
         }
       } catch (err) {
-        console.error('❌ Erro ao buscar usuário:', err);
+        console.error('âŒ Erro ao buscar usuÃ¡rio:', err);
       }
     }
 
     if (!authorId) {
-      console.error('❌ Não foi possível obter ID do usuário');
+      console.error('âŒ NÃ£o foi possÃ­vel obter ID do usuÃ¡rio');
       toast({
         title: "Erro",
-        description: "Não foi possível identificar o usuário. Por favor, faça login novamente.",
+        description: "NÃ£o foi possÃ­vel identificar o usuÃ¡rio. Por favor, faÃ§a login novamente.",
         variant: "destructive"
       });
       return null;
@@ -353,21 +354,8 @@ export function useAttachments(cardId: string) {
 
     setIsUploading(true);
     try {
-      // Get card title for better file naming
-      const { data: cardData } = await supabase
-        .from('kanban_cards')
-        .select('title')
-        .eq('id', cardId)
-        .single();
-
-      // Generate more descriptive file path with card name as folder
+      // âœ… USAR CARD_ID COMO PASTA (nunca muda, mesmo se o nome do card mudar!)
       const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-      
-      // Ensure card title is properly sanitized and not empty
-      let cardTitle = cardData?.title ? cardData.title.replace(/[^a-zA-Z0-9_-]/g, '_') : 'CARDS_SEM_TITULO';
-      if (!cardTitle || cardTitle === 'Card' || cardTitle === '') {
-        cardTitle = 'CARDS_SEM_TITULO';
-      }
       
       const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       const randomSuffix = Math.random().toString(36).substring(2, 8);
@@ -376,18 +364,17 @@ export function useAttachments(cardId: string) {
       const baseName = customFileName || file.name.replace(/\.[^/.]+$/, '');
       const sanitizedName = baseName.replace(/[^a-zA-Z0-9_-]/g, '_'); // Sanitize name
       
-      // Create folder structure: CARD_NAME/CUSTOM_NAME_DATE_RANDOM.ext
+      // Create folder structure: CARD_ID/CUSTOM_NAME_DATE_RANDOM.ext
+      // âœ… card_id nunca muda, garantindo que anexos sempre sejam encontrados
       const fileName = `${sanitizedName}_${timestamp}_${randomSuffix}.${fileExtension}`;
-      
-      // Ensure filePath always follows the pattern: CARD_TITLE/FILE_NAME
-      const filePath = `${cardTitle}/${fileName}`;
+      const filePath = `${cardId}/${fileName}`;
       
       // Debug log to verify path structure
-      console.log('🔍 DEBUG Storage Path:', {
-        cardTitle,
+      console.log('ðŸ” DEBUG Storage Path:', {
+        cardId,
         fileName,
         filePath,
-        originalCardTitle: cardData?.title
+        explanation: 'Usando card_id como pasta para garantir que anexos nunca sejam perdidos se o nome do card mudar'
       });
 
       // Upload file to Supabase Storage
@@ -439,7 +426,7 @@ export function useAttachments(cardId: string) {
       console.error('Error uploading attachment:', error);
       toast({
         title: "Erro ao fazer upload",
-        description: error.message || "Não foi possível anexar o arquivo",
+        description: error.message || "NÃ£o foi possÃ­vel anexar o arquivo",
         variant: "destructive"
       });
       return null;
@@ -455,25 +442,22 @@ export function useAttachments(cardId: string) {
     try {
       // Get attachment info first
       const attachment = attachments.find(a => a.id === attachmentId);
-      if (!attachment) throw new Error('Anexo não encontrado');
+      if (!attachment) throw new Error('Anexo nÃ£o encontrado');
 
-      // Delete from storage
-      const { error: storageError } = await supabase.storage
-        .from('card-attachments')
-        .remove([attachment.file_path]);
-
-      if (storageError) throw storageError;
-
-      // Delete from database
-      const { error: dbError } = await supabase
+      // SOFT DELETE: Marcar como deletado (nÃ£o remove do storage ainda)
+      // O arquivo serÃ¡ removido do storage apÃ³s 90 dias pela limpeza automÃ¡tica
+      const { error: dbError } = await (supabase as any)
         .from('card_attachments')
-        .delete()
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: (await supabase.auth.getUser()).data.user?.id
+        })
         .eq('id', attachmentId);
 
       if (dbError) throw dbError;
 
-      // Remove from local state
-      setAttachments(prev => prev.filter(a => a.id !== attachmentId));
+      // Recarregar anexos do banco para garantir sincronizaÃ§Ã£o
+      await loadAttachments();
       
       toast({
         title: "Anexo removido",
@@ -485,14 +469,14 @@ export function useAttachments(cardId: string) {
       console.error('Error deleting attachment:', error);
       toast({
         title: "Erro ao remover anexo",
-        description: error.message || "Não foi possível remover o anexo",
+        description: error.message || "NÃ£o foi possÃ­vel remover o anexo",
         variant: "destructive"
       });
       return false;
     }
   };
 
-  // Função para listar todos os arquivos no bucket (debug)
+  // FunÃ§Ã£o para listar todos os arquivos no bucket (debug)
   const listAllFiles = async () => {
     try {
       const { data, error } = await supabase.storage
@@ -513,16 +497,16 @@ export function useAttachments(cardId: string) {
     }
   };
 
-  // Função para tentar encontrar arquivo com diferentes caminhos
+  // FunÃ§Ã£o para tentar encontrar arquivo com diferentes caminhos
   const findFileWithAlternativePaths = async (originalPath: string) => {
     const fileName = originalPath.split('/').pop();
     const cardName = originalPath.split('/')[0];
     
-    // Baseado nos arquivos reais que vimos, gerar variações mais precisas
+    // Baseado nos arquivos reais que vimos, gerar variaÃ§Ãµes mais precisas
     const sanitizedCardName = cardName.replace(/[^a-zA-Z0-9_-]/g, '_');
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9_.-]/g, '_');
     
-    // Gerar diferentes variações do caminho baseado nos arquivos que vimos
+    // Gerar diferentes variaÃ§Ãµes do caminho baseado nos arquivos que vimos
     const paths = [
       originalPath, // Caminho original
       fileName, // Apenas o nome do arquivo
@@ -546,16 +530,16 @@ export function useAttachments(cardId: string) {
         
         console.log(`Testing path: ${path} -> ${data.publicUrl}`);
         
-        // Testar se a URL é válida fazendo uma requisição HEAD
+        // Testar se a URL Ã© vÃ¡lida fazendo uma requisiÃ§Ã£o HEAD
         const response = await fetch(data.publicUrl, { method: 'HEAD' });
         if (response.ok) {
-          console.log('✅ Found file at path:', path);
+          console.log('âœ… Found file at path:', path);
           return data.publicUrl;
         } else {
-          console.log(`❌ Path ${path} returned ${response.status}`);
+          console.log(`âŒ Path ${path} returned ${response.status}`);
         }
       } catch (error) {
-        console.log(`❌ Path ${path} failed:`, error);
+        console.log(`âŒ Path ${path} failed:`, error);
       }
     }
     
@@ -566,9 +550,31 @@ export function useAttachments(cardId: string) {
   const getDownloadUrl = async (filePath: string): Promise<string | null> => {
     try {
       console.log('=== DEBUGGING DOWNLOAD ===');
-      console.log('Requested filePath:', filePath);
+      console.log('ðŸ“¥ Requested filePath:', filePath);
       
-      // Listar todos os arquivos para debug
+      // PRIMEIRO: Tentar usar o file_path EXATAMENTE como estÃ¡ no banco
+      // (sem modificaÃ§Ãµes, sem prefixos extras)
+      const { data: directUrl } = supabase.storage
+        .from('card-attachments')
+        .getPublicUrl(filePath);
+      
+      console.log('ðŸ“¥ URL gerada diretamente:', directUrl.publicUrl);
+      
+      // Verificar se o arquivo existe fazendo uma requisiÃ§Ã£o HEAD
+      try {
+        const response = await fetch(directUrl.publicUrl, { method: 'HEAD' });
+        if (response.ok) {
+          console.log('âœ… Arquivo encontrado com path direto:', filePath);
+          return directUrl.publicUrl;
+        } else {
+          console.log('âŒ Arquivo nÃ£o encontrado com path direto (status:', response.status, ')');
+        }
+      } catch (error) {
+        console.log('âŒ Erro ao verificar arquivo:', error);
+      }
+      
+      // FALLBACK: Tentar alternativas apenas se o path direto falhou
+      console.log('âš ï¸ Path direto falhou, tentando alternativas...');
       await listAllFiles();
       
       // Primeiro, verificar se o arquivo existe
@@ -591,7 +597,7 @@ export function useAttachments(cardId: string) {
         fileName: filePath.split('/').pop()
       });
 
-      // Se o arquivo não foi encontrado, tentar caminhos alternativos
+      // Se o arquivo nÃ£o foi encontrado, tentar caminhos alternativos
       if (!fileData || fileData.length === 0) {
         console.log('File not found with original path, trying alternatives...');
         const alternativeUrl = await findFileWithAlternativePaths(filePath);
@@ -600,7 +606,7 @@ export function useAttachments(cardId: string) {
         }
       }
 
-      // Se ainda não encontrou, tentar buscar por padrão similar nos arquivos
+      // Se ainda nÃ£o encontrou, tentar buscar por padrÃ£o similar nos arquivos
       console.log('Trying to find file by pattern matching...');
       const allFiles = await listAllFiles();
       const fileName = filePath.split('/').pop();
@@ -608,7 +614,7 @@ export function useAttachments(cardId: string) {
       
       // Buscar arquivos que contenham partes do nome
       const matchingFiles = allFiles.filter(file => {
-        // Pular arquivos que são apenas pastas ou placeholders
+        // Pular arquivos que sÃ£o apenas pastas ou placeholders
         if (file.name === 'card-attachments' || file.name.includes('.emptyFolderPlaceholder')) {
           return false;
         }
@@ -617,7 +623,7 @@ export function useAttachments(cardId: string) {
         const fileNameLower = fileName.toLowerCase();
         const cardNameLower = cardName.toLowerCase();
         
-        // Limpar caracteres especiais para comparação
+        // Limpar caracteres especiais para comparaÃ§Ã£o
         const cleanFileName = fileNameLower.replace(/[^a-zA-Z0-9]/g, '');
         const cleanCardName = cardNameLower.replace(/[^a-zA-Z0-9]/g, '');
         
@@ -645,7 +651,7 @@ export function useAttachments(cardId: string) {
         return data.publicUrl;
       }
 
-      // Se não encontrou por pattern matching, tentar buscar manualmente baseado nos arquivos conhecidos
+      // Se nÃ£o encontrou por pattern matching, tentar buscar manualmente baseado nos arquivos conhecidos
       console.log('No pattern match found, trying manual search...');
       const knownFiles = [
         'card-attachments/ANTONIO_BOZUTT/FICHA_CNPJ___2__ANTONIO_BOZUTT_2025-10-06_9zebdg.pdf',
@@ -664,15 +670,15 @@ export function useAttachments(cardId: string) {
           console.log(`Testing known file: ${knownFile} -> ${data.publicUrl}`);
           const response = await fetch(data.publicUrl, { method: 'HEAD' });
           if (response.ok) {
-            console.log('✅ Found file with known path:', knownFile);
+            console.log('âœ… Found file with known path:', knownFile);
             return data.publicUrl;
           }
         } catch (error) {
-          console.log(`❌ Known file ${knownFile} failed:`, error);
+          console.log(`âŒ Known file ${knownFile} failed:`, error);
         }
       }
 
-      // Para bucket público, usar getPublicUrl
+      // Para bucket pÃºblico, usar getPublicUrl
       const { data } = supabase.storage
         .from('card-attachments')
         .getPublicUrl(filePath);
@@ -750,23 +756,23 @@ export function useAttachments(cardId: string) {
   // Get file icon based on extension
   const getFileIcon = (extension: string): string => {
     const iconMap: Record<string, string> = {
-      'pdf': '📄',
-      'jpg': '🖼️',
-      'jpeg': '🖼️',
-      'png': '🖼️',
-      'gif': '🖼️',
-      'doc': '📝',
-      'docx': '📝',
-      'xls': '📊',
-      'xlsx': '📊',
-      'txt': '📄',
-      'zip': '📦',
-      'rar': '📦',
-      'mp4': '🎥',
-      'mp3': '🎵',
-      'wav': '🎵'
+      'pdf': 'ðŸ“„',
+      'jpg': 'ðŸ–¼ï¸',
+      'jpeg': 'ðŸ–¼ï¸',
+      'png': 'ðŸ–¼ï¸',
+      'gif': 'ðŸ–¼ï¸',
+      'doc': 'ðŸ“',
+      'docx': 'ðŸ“',
+      'xls': 'ðŸ“Š',
+      'xlsx': 'ðŸ“Š',
+      'txt': 'ðŸ“„',
+      'zip': 'ðŸ“¦',
+      'rar': 'ðŸ“¦',
+      'mp4': 'ðŸŽ¥',
+      'mp3': 'ðŸŽµ',
+      'wav': 'ðŸŽµ'
     };
-    return iconMap[extension.toLowerCase()] || '📎';
+    return iconMap[extension.toLowerCase()] || 'ðŸ“Ž';
   };
 
   // Load attachments when cardId changes
@@ -781,7 +787,7 @@ export function useAttachments(cardId: string) {
     loadAttachments,
     uploadAttachment,
     deleteAttachment,
-    getDownloadUrl: getDownloadUrl, // Usar a função standalone exportada
+    getDownloadUrl: getDownloadUrl, // Usar a funÃ§Ã£o standalone exportada
     getAttachmentHistory,
     getCurrentAttachments,
     getAttachmentStats,

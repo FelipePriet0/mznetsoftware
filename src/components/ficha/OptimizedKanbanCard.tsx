@@ -170,13 +170,18 @@ export function OptimizedKanbanCard({
         // Prevent card click when clicking on specific CTAs
         const target = e.target as HTMLElement;
         if (target.closest('[data-action-button]') || 
-            target.closest('[data-dropdown-trigger]')) {
+            target.closest('[data-dropdown-trigger]') ||
+            target.closest('[role="menuitem"]') ||
+            target.closest('.dropdown-menu') ||
+            target.closest('[data-radix-collection-item]')) {
+          console.log('🚫 [DEBUG] Clicou no dropdown, bloqueando card click');
           return;
         }
         // Prevent click during drag
         if (isDraggingHook) {
           return;
         }
+        console.log('✅ [DEBUG] Clicou no card, abrindo edição');
         onCardClick?.(card);
       }}
       className={cn(

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,7 +37,7 @@ export function DeleteAttachmentDialog({
             Tem certeza que deseja excluir o arquivo <strong>"{attachment.file_name}"</strong>?
             <br />
             <span className="text-sm text-muted-foreground mt-2 block">
-              Esta ação não pode ser desfeita. O arquivo será removido permanentemente.
+              Esta aÃ§Ã£o nÃ£o pode ser desfeita. O arquivo serÃ¡ removido permanentemente.
             </span>
           </AlertDialogDescription>
         </AlertDialogHeader>

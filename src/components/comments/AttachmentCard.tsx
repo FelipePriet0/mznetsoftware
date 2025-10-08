@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
@@ -33,7 +33,7 @@ interface AttachmentCardProps {
     file_type: string;
     file_extension: string;
     author_name: string;
-    author_id?: string; // ID do autor para verificar permissões
+    author_id?: string; // ID do autor para verificar permissÃµes
     description?: string;
     created_at?: string;
     possible_paths?: string[]; // Caminhos alternativos para tentar
@@ -73,9 +73,9 @@ const formatTimeAgo = (dateString: string): string => {
   const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
   
   if (diffInMinutes < 1) return 'Agora mesmo';
-  if (diffInMinutes < 60) return `Há ${diffInMinutes} minutos`;
-  if (diffInMinutes < 1440) return `Há ${Math.floor(diffInMinutes / 60)} horas`;
-  return `Há ${Math.floor(diffInMinutes / 1440)} dias`;
+  if (diffInMinutes < 60) return `HÃ¡ ${diffInMinutes} minutos`;
+  if (diffInMinutes < 1440) return `HÃ¡ ${Math.floor(diffInMinutes / 60)} horas`;
+  return `HÃ¡ ${Math.floor(diffInMinutes / 1440)} dias`;
 };
 
 export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: AttachmentCardProps) {
@@ -87,7 +87,7 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
   const { profile } = useAuth();
   const { toast } = useToast();
 
-  // Verificar permissões (sistema único de empresa)
+  // Verificar permissÃµes (sistema Ãºnico de empresa)
   const canDownload = canDownloadAttachment(
     profile, 
     attachment.author_id, 
@@ -100,29 +100,29 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
     profile?.id
   );
 
-  // Debug: verificar dados do attachment e permissões
+  // Debug: verificar dados do attachment e permissÃµes
   console.log('AttachmentCard received data:', attachment);
   console.log('attachment.file_path:', attachment.file_path);
   console.log('attachment.file_name:', attachment.file_name);
   console.log('Permissions:', { canDownload, canDelete, profile: profile?.role });
 
-  // Função para buscar URL do PDF usando o mesmo sistema de download que funciona
+  // FunÃ§Ã£o para buscar URL do PDF usando o mesmo sistema de download que funciona
   const getPdfUrl = async (filePath: string) => {
     try {
       setIsLoadingPdf(true);
       console.log('Getting PDF URL for preview:', filePath);
 
-      // Usar a função standalone exportada
+      // Usar a funÃ§Ã£o standalone exportada
       const { getDownloadUrl } = await import('@/hooks/useAttachments');
       
-      // Usar a mesma função que funciona para download
+      // Usar a mesma funÃ§Ã£o que funciona para download
       const url = await getDownloadUrl(filePath);
       
       if (url) {
-        console.log('✅ PDF URL found for preview:', url);
+        console.log('âœ… PDF URL found for preview:', url);
         return url;
       } else {
-        console.log('❌ PDF not found for preview');
+        console.log('âŒ PDF not found for preview');
         return null;
       }
     } catch (error) {
@@ -150,7 +150,7 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
 
   const handleClosePreview = () => {
     setShowPreview(false);
-    // Limpar URL do PDF quando fechar para liberar memória
+    // Limpar URL do PDF quando fechar para liberar memÃ³ria
     setPdfUrl(null);
   };
 
@@ -179,7 +179,7 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
     if (!onDelete) {
       toast({
         title: "Erro",
-        description: "Função de exclusão não disponível",
+        description: "FunÃ§Ã£o de exclusÃ£o nÃ£o disponÃ­vel",
         variant: "destructive",
       });
       return;
@@ -190,7 +190,7 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
       await onDelete(attachment.id, attachment.file_path);
       toast({
         title: "Sucesso",
-        description: "Anexo excluído com sucesso",
+        description: "Anexo excluÃ­do com sucesso",
       });
       setShowDeleteDialog(false);
     } catch (error) {
@@ -211,7 +211,7 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
         "flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow",
         "dark:bg-gray-800 dark:border-gray-600"
       )}>
-        {/* Lado esquerdo - Botão PDF e nome do arquivo */}
+        {/* Lado esquerdo - BotÃ£o PDF e nome do arquivo */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {canDownload ? (
             <Button
@@ -235,12 +235,12 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
               {attachment.file_name}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              Adicionado há {formatTimeAgo(attachment.created_at || new Date().toISOString())}
+              Adicionado hÃ¡ {formatTimeAgo(attachment.created_at || new Date().toISOString())}
             </div>
           </div>
         </div>
 
-        {/* Lado direito - Botões de ação */}
+        {/* Lado direito - BotÃµes de aÃ§Ã£o */}
         <div className="flex items-center gap-2">
           {canDownload ? (
             <Button
@@ -253,12 +253,12 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
               <ArrowUpRight className="h-4 w-4" />
             </Button>
           ) : (
-            <div className="h-8 w-8 p-0 text-gray-400 dark:text-gray-500 flex items-center justify-center" title="Sem permissão para baixar">
+            <div className="h-8 w-8 p-0 text-gray-400 dark:text-gray-500 flex items-center justify-center" title="Sem permissÃ£o para baixar">
               <Lock className="h-4 w-4" />
             </div>
           )}
           
-          {/* Menu dos 3 pontinhos com opção de excluir */}
+          {/* Menu dos 3 pontinhos com opÃ§Ã£o de excluir */}
           {canDelete ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -266,7 +266,7 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700"
-                  title="Mais opções"
+                  title="Mais opÃ§Ãµes"
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -282,7 +282,7 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="h-8 w-8 p-0 text-gray-300 dark:text-gray-600 flex items-center justify-center" title="Sem permissão para excluir">
+            <div className="h-8 w-8 p-0 text-gray-300 dark:text-gray-600 flex items-center justify-center" title="Sem permissÃ£o para excluir">
               <MoreVertical className="h-4 w-4" />
             </div>
           )}
@@ -295,7 +295,7 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
-              Pré-visualização: {attachment.file_name}
+              PrÃ©-visualizaÃ§Ã£o: {attachment.file_name}
             </DialogTitle>
           </DialogHeader>
           
@@ -341,7 +341,7 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
               <div className="w-full h-96 border rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
                 <div className="text-center text-gray-500 dark:text-gray-400">
                   <FileText className="h-16 w-16 mx-auto mb-4" />
-                  <p>Pré-visualização não disponível para este tipo de arquivo</p>
+                  <p>PrÃ©-visualizaÃ§Ã£o nÃ£o disponÃ­vel para este tipo de arquivo</p>
                   <p className="text-sm">Clique em "Baixar" para abrir o arquivo</p>
                 </div>
               </div>
@@ -360,14 +360,14 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
             ) : (
               <div className="flex items-center gap-2 px-3 py-2 text-gray-500 text-sm">
                 <Lock className="h-4 w-4" />
-                Sem permissão para baixar
+                Sem permissÃ£o para baixar
               </div>
             )}
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de Confirmação Dupla para Exclusão */}
+      {/* Dialog de ConfirmaÃ§Ã£o Dupla para ExclusÃ£o */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -378,10 +378,10 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
             <AlertDialogDescription className="space-y-2">
               <p>Tem certeza que deseja excluir o anexo <strong>"{attachment.file_name}"</strong>?</p>
               <p className="text-sm text-red-600 dark:text-red-400">
-                ⚠️ Esta ação não pode ser desfeita. O arquivo será removido permanentemente.
+                âš ï¸ Esta aÃ§Ã£o nÃ£o pode ser desfeita. O arquivo serÃ¡ removido permanentemente.
               </p>
               <p className="text-sm font-medium">
-                Clique em "Confirmar Exclusão" para prosseguir.
+                Clique em "Confirmar ExclusÃ£o" para prosseguir.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -405,7 +405,7 @@ export function AttachmentCard({ attachment, onDownload, onPreview, onDelete }: 
               ) : (
                 <>
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Confirmar Exclusão
+                  Confirmar ExclusÃ£o
                 </>
               )}
             </AlertDialogAction>

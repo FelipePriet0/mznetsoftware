@@ -1,20 +1,20 @@
--- Script para corrigir valores NULL na coluna thread_id
+﻿-- Script para corrigir valores NULL na coluna thread_id
 -- Execute este script no Supabase SQL Editor
 
 -- 1. PRIMEIRO: POPULAR TODOS OS thread_id NULL
--- Para comentários principais (level = 0), usar o próprio ID como thread_id
+-- Para comentÃ¡rios principais (level = 0), usar o prÃ³prio ID como thread_id
 UPDATE public.card_comments 
 SET thread_id = id 
 WHERE level = 0 AND thread_id IS NULL;
 
--- 2. PARA COMENTÁRIOS DE RESPOSTA (level > 0), usar o thread_id do comentário pai
--- Primeiro, vamos atualizar em múltiplas passadas para garantir que todos sejam populados
+-- 2. PARA COMENTÃRIOS DE RESPOSTA (level > 0), usar o thread_id do comentÃ¡rio pai
+-- Primeiro, vamos atualizar em mÃºltiplas passadas para garantir que todos sejam populados
 DO $$
 DECLARE
     updated_count INTEGER;
 BEGIN
     LOOP
-        -- Atualizar comentários que têm parent_id com thread_id definido
+        -- Atualizar comentÃ¡rios que tÃªm parent_id com thread_id definido
         UPDATE public.card_comments 
         SET thread_id = (
             SELECT c2.thread_id 
@@ -33,11 +33,11 @@ BEGIN
         
         GET DIAGNOSTICS updated_count = ROW_COUNT;
         
-        -- Se não atualizou nenhum registro, sair do loop
+        -- Se nÃ£o atualizou nenhum registro, sair do loop
         EXIT WHEN updated_count = 0;
     END LOOP;
     
-    -- Para qualquer comentário que ainda tenha thread_id NULL, usar o próprio ID
+    -- Para qualquer comentÃ¡rio que ainda tenha thread_id NULL, usar o prÃ³prio ID
     UPDATE public.card_comments 
     SET thread_id = id 
     WHERE thread_id IS NULL;
@@ -50,7 +50,7 @@ SELECT
     COUNT(*) - COUNT(thread_id) as null_thread_ids
 FROM public.card_comments;
 
--- 4. SE NÃO HOUVER VALORES NULL, DEFINIR CONSTRAINT NOT NULL
+-- 4. SE NÃƒO HOUVER VALORES NULL, DEFINIR CONSTRAINT NOT NULL
 DO $$
 BEGIN
     -- Verificar se existem valores NULL
@@ -58,7 +58,7 @@ BEGIN
         SELECT 1 FROM public.card_comments 
         WHERE thread_id IS NULL
     ) THEN
-        -- Se não há valores NULL, definir constraint NOT NULL
+        -- Se nÃ£o hÃ¡ valores NULL, definir constraint NOT NULL
         ALTER TABLE public.card_comments 
         ALTER COLUMN thread_id SET NOT NULL;
         

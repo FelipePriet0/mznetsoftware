@@ -50,7 +50,11 @@ export function CommentContentRenderer({
 
   // Debug: verificar conteúdo do comentário (apenas se contém anexo)
   if (content.includes('📎')) {
-    console.log('CommentContentRenderer processing attachment comment:', { content: content.substring(0, 100) + '...' });
+    console.log('CommentContentRenderer processing attachment comment:', { 
+      content: content.substring(0, 100) + '...',
+      hasAttachmentsFromDB: attachments.length > 0,
+      attachmentsFromDB: attachments
+    });
   }
   
   // Verificar se é um comentário de TAREFA primeiro
@@ -204,10 +208,55 @@ export function CommentContentRenderer({
     );
   }
   
-  // Verificar se é um comentário de anexo no formato antigo completo
+  // Se há anexos vindos do banco de dados E o comentário menciona anexo,
+  // PRIORIZAR os anexos do banco (têm o file_path correto baseado no ID!)
+  const hasAttachmentsFromDB = attachments && attachments.length > 0;
+  const isAttachmentComment = content.includes('📎');
+  
+  if (isAttachmentComment && hasAttachmentsFromDB) {
+    console.log('✅ Usando anexos do banco de dados (file_path pelo ID):', {
+      attachmentCount: attachments.length,
+      attachments: attachments.map(a => ({
+        id: a.id,
+        file_name: a.file_name,
+        file_path: a.file_path
+      }))
+    });
+    
+    return (
+      <div className="space-y-2">
+        <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+          {content.includes('📎 Anexo enviado') || content.includes('📎 Anexos enviados') 
+            ? content 
+            : 'Arquivo anexado:'}
+        </div>
+        <div className="space-y-2">
+          {attachments.map((attachment) => {
+            console.log('📎 Renderizando anexo do banco:', {
+              id: attachment.id,
+              file_name: attachment.file_name,
+              file_path: attachment.file_path
+            });
+            
+            return (
+              <AttachmentCard
+                key={attachment.id}
+                attachment={attachment}
+                onDownload={onDownloadAttachment}
+                onDelete={onDeleteAttachment}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+  
+  // FALLBACK: Verificar se é um comentário de anexo no formato antigo completo
+  // (só usar isso se NÃO houver anexos no banco de dados)
   const attachmentMatch = content.match(ATTACHMENT_COMMENT_REGEX);
   
-  if (attachmentMatch) {
+  if (attachmentMatch && !hasAttachmentsFromDB) {
     const [, fileName, cardTitle, fileType, fileSize, fileExtension, authorName, authorRole] = attachmentMatch;
     
     // Debug logs reduzidos
@@ -278,9 +327,10 @@ export function CommentContentRenderer({
     );
   }
 
-  // Verificar se é um comentário de anexo mais simples (apenas com emoji)
+  // FALLBACK: Verificar se é um comentário de anexo mais simples (apenas com emoji)
+  // (só usar isso se NÃO houver anexos no banco de dados)
   const simpleAttachmentMatch = content.match(ATTACHMENT_COMMENT_FLEXIBLE_REGEX);
-  if (simpleAttachmentMatch) {
+  if (simpleAttachmentMatch && !hasAttachmentsFromDB) {
     const fileName = simpleAttachmentMatch[1].trim();
     
     // Tentar extrair informações adicionais do conteúdo

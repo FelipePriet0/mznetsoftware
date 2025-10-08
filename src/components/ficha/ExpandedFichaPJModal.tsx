@@ -72,27 +72,13 @@ export function ExpandedFichaPJModal({ open, onClose, applicationId, onRefetch }
       try {
         const { data } = await supabase
           .from('kanban_cards')
-          .select('reanalysis_notes, comments, comments_short')
+          .select('reanalysis_notes')
           .eq('id', applicationId)
           .maybeSingle();
         let notes: any[] = [];
         const raw = (data as any)?.reanalysis_notes;
         if (Array.isArray(raw)) notes = raw as any[];
         else if (typeof raw === 'string') { try { notes = JSON.parse(raw) || []; } catch {}
-        }
-        if ((!notes || notes.length === 0) && ((data as any)?.comments || (data as any)?.comments_short)) {
-          notes = [{ 
-            id: crypto.randomUUID(), 
-            author_id: 'legacy', 
-            author_name: 'Sistema', 
-            author_role: '—', 
-            created_at: new Date().toISOString(), 
-            text: (data as any)?.comments || (data as any)?.comments_short,
-            parent_id: null,
-            level: 0,
-            thread_id: crypto.randomUUID(),
-            is_thread_starter: true
-          }];
         }
         
         // Migrar pareceres antigos que não têm estrutura hierárquica
@@ -215,7 +201,7 @@ export function ExpandedFichaPJModal({ open, onClose, applicationId, onRefetch }
     setShowNewParecerEditor(false);
     try {
       const serialized = JSON.stringify(next);
-      const { error } = await supabase.from('kanban_cards').update({ reanalysis_notes: serialized, comments: text, comments_short: text }).eq('id', applicationId);
+      const { error } = await supabase.from('kanban_cards').update({ reanalysis_notes: serialized }).eq('id', applicationId);
       if (error) throw error;
       
       // Chamar onRefetch para atualizar outros componentes
@@ -355,7 +341,7 @@ export function ExpandedFichaPJModal({ open, onClose, applicationId, onRefetch }
     setEditingText("");
     try {
       const serialized = JSON.stringify(updated);
-      const { error } = await supabase.from('kanban_cards').update({ reanalysis_notes: serialized, comments: text, comments_short: text }).eq('id', applicationId);
+      const { error } = await supabase.from('kanban_cards').update({ reanalysis_notes: serialized }).eq('id', applicationId);
       if (error) throw error;
       
       // Chamar onRefetch para atualizar outros componentes
@@ -405,12 +391,6 @@ export function ExpandedFichaPJModal({ open, onClose, applicationId, onRefetch }
       // Preparar dados para update
       const updateData: any = { reanalysis_notes: serialized };
       
-      // Se a lista ficou vazia, também limpar os campos legados
-      if (updated.length === 0) {
-        console.log('📝 [PJ] Lista vazia - limpando também campos legados (comments, comments_short)');
-        updateData.comments = null;
-        updateData.comments_short = null;
-      }
       
       // Salvar no banco
       const { error } = await supabase

@@ -1,11 +1,11 @@
--- =====================================================
--- SCRIPT PARA LIMPAR ARQUIVOS ÓRFÃOS NO STORAGE
+﻿-- =====================================================
+-- SCRIPT PARA LIMPAR ARQUIVOS Ã“RFÃƒOS NO STORAGE
 -- Execute este script no Supabase SQL Editor
 -- =====================================================
 
--- 1. IDENTIFICAR ARQUIVOS ÓRFÃOS (existem no Storage mas não no banco)
+-- 1. IDENTIFICAR ARQUIVOS Ã“RFÃƒOS (existem no Storage mas nÃ£o no banco)
 -- NOTA: Este script lista os arquivos que precisam ser removidos manualmente
--- pois não temos acesso direto ao Storage via SQL
+-- pois nÃ£o temos acesso direto ao Storage via SQL
 
 -- 2. VERIFICAR ARQUIVOS DUPLICADOS NO BANCO
 SELECT 
@@ -33,16 +33,16 @@ WHERE file_path LIKE 'card-attachments/%'
    OR (card_title IS NOT NULL AND file_path NOT LIKE card_title || '/%')
 ORDER BY created_at DESC;
 
--- 4. ESTATÍSTICAS DE ORGANIZAÇÃO
+-- 4. ESTATÃSTICAS DE ORGANIZAÃ‡ÃƒO
 SELECT 
-  'ESTATÍSTICAS:' as status,
+  'ESTATÃSTICAS:' as status,
   COUNT(*) as total_attachments,
   COUNT(DISTINCT card_title) as unique_cards,
   COUNT(CASE WHEN file_path LIKE '%/%' THEN 1 END) as files_in_folders,
   COUNT(CASE WHEN file_path NOT LIKE '%/%' THEN 1 END) as files_in_root
 FROM card_attachments;
 
--- 5. LISTAR TODAS AS PASTAS (CARDS) ÚNICAS
+-- 5. LISTAR TODAS AS PASTAS (CARDS) ÃšNICAS
 SELECT 
   'PASTAS DE CARDS:' as status,
   card_title,
@@ -66,8 +66,8 @@ SELECT
   ) as organization_percentage
 FROM card_attachments;
 
--- 7. CONSULTAR STATUS DA ORGANIZAÇÃO
+-- 7. CONSULTAR STATUS DA ORGANIZAÃ‡ÃƒO
 SELECT * FROM public.storage_organization_status;
 
--- 8. COMENTÁRIO FINAL
+-- 8. COMENTÃRIO FINAL
 SELECT 'Storage cleanup analysis complete!' as status;

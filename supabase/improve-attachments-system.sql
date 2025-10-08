@@ -1,4 +1,4 @@
--- =====================================================
+﻿-- =====================================================
 -- SCRIPT PARA APRIMORAR SISTEMA DE ANEXOS
 -- Execute este script no Supabase SQL Editor
 -- =====================================================
@@ -11,11 +11,11 @@ ADD COLUMN IF NOT EXISTS card_title text;
 ALTER TABLE public.card_attachments 
 ADD COLUMN IF NOT EXISTS card_title text;
 
--- 3. CRIAR FUNÇÃO PARA ATUALIZAR card_title EM card_comments
+-- 3. CRIAR FUNÃ‡ÃƒO PARA ATUALIZAR card_title EM card_comments
 CREATE OR REPLACE FUNCTION public.update_card_title_in_comments()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Buscar o título do card
+  -- Buscar o tÃ­tulo do card
   SELECT title INTO NEW.card_title
   FROM public.kanban_cards 
   WHERE id = NEW.card_id;
@@ -24,11 +24,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 4. CRIAR FUNÇÃO PARA ATUALIZAR card_title EM card_attachments
+-- 4. CRIAR FUNÃ‡ÃƒO PARA ATUALIZAR card_title EM card_attachments
 CREATE OR REPLACE FUNCTION public.update_card_title_in_attachments()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Buscar o título do card
+  -- Buscar o tÃ­tulo do card
   SELECT title INTO NEW.card_title
   FROM public.kanban_cards 
   WHERE id = NEW.card_id;
@@ -66,33 +66,33 @@ SET card_title = (
 )
 WHERE card_title IS NULL;
 
--- 8. CRIAR ÍNDICE PARA PERFORMANCE
+-- 8. CRIAR ÃNDICE PARA PERFORMANCE
 CREATE INDEX IF NOT EXISTS idx_card_comments_card_title ON public.card_comments (card_title);
 CREATE INDEX IF NOT EXISTS idx_card_attachments_card_title ON public.card_attachments (card_title);
 
--- 9. ATUALIZAR FUNÇÃO DE COMENTÁRIO AUTOMÁTICO PARA INCLUIR TÍTULO
+-- 9. ATUALIZAR FUNÃ‡ÃƒO DE COMENTÃRIO AUTOMÃTICO PARA INCLUIR TÃTULO
 CREATE OR REPLACE FUNCTION public.create_attachment_comment()
 RETURNS TRIGGER AS $$
 DECLARE
   comment_content TEXT;
   card_title_text TEXT;
 BEGIN
-  -- Buscar título do card
+  -- Buscar tÃ­tulo do card
   SELECT title INTO card_title_text
   FROM public.kanban_cards 
   WHERE id = NEW.card_id;
   
-  -- Criar conteúdo do comentário com título da ficha
-  comment_content := '📎 Anexo adicionado: ' || NEW.file_name || E'\n' ||
-                     '📋 Ficha: ' || COALESCE(card_title_text, 'Sem título') || E'\n' ||
-                     (CASE WHEN NEW.description IS NOT NULL THEN '📝 Descrição: ' || NEW.description || E'\n' ELSE '' END) ||
-                     '📊 Detalhes do arquivo:' || E'\n' ||
-                     '• Tipo: ' || NEW.file_type || E'\n' ||
-                     '• Tamanho: ' || pg_size_pretty(NEW.file_size) || E'\n' ||
-                     '• Extensão: ' || NEW.file_extension || E'\n' ||
-                     '• Autor: ' || NEW.author_name || ' (' || NEW.author_role || ')';
+  -- Criar conteÃºdo do comentÃ¡rio com tÃ­tulo da ficha
+  comment_content := 'ðŸ“Ž Anexo adicionado: ' || NEW.file_name || E'\n' ||
+                     'ðŸ“‹ Ficha: ' || COALESCE(card_title_text, 'Sem tÃ­tulo') || E'\n' ||
+                     (CASE WHEN NEW.description IS NOT NULL THEN 'ðŸ“ DescriÃ§Ã£o: ' || NEW.description || E'\n' ELSE '' END) ||
+                     'ðŸ“Š Detalhes do arquivo:' || E'\n' ||
+                     'â€¢ Tipo: ' || NEW.file_type || E'\n' ||
+                     'â€¢ Tamanho: ' || pg_size_pretty(NEW.file_size) || E'\n' ||
+                     'â€¢ ExtensÃ£o: ' || NEW.file_extension || E'\n' ||
+                     'â€¢ Autor: ' || NEW.author_name || ' (' || NEW.author_role || ')';
 
-  -- Inserir comentário com título da ficha
+  -- Inserir comentÃ¡rio com tÃ­tulo da ficha
   INSERT INTO public.card_comments (card_id, parent_id, author_id, author_name, author_role, content, level, card_title)
   VALUES (
     NEW.card_id,
@@ -109,7 +109,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 10. ATUALIZAR FUNÇÃO DE COMENTÁRIO DE REMOÇÃO
+-- 10. ATUALIZAR FUNÃ‡ÃƒO DE COMENTÃRIO DE REMOÃ‡ÃƒO
 CREATE OR REPLACE FUNCTION public.create_attachment_deletion_comment()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -118,25 +118,25 @@ DECLARE
   v_author_name text;
   v_author_role text;
 BEGIN
-  -- Buscar título do card
+  -- Buscar tÃ­tulo do card
   SELECT title INTO card_title_text
   FROM public.kanban_cards 
   WHERE id = OLD.card_id;
   
-  -- Buscar informações do usuário atual
+  -- Buscar informaÃ§Ãµes do usuÃ¡rio atual
   SELECT full_name, role INTO v_author_name, v_author_role
   FROM public.profiles WHERE id = auth.uid();
   
-  -- Criar conteúdo do comentário com título da ficha
-  comment_content := '🗑️ Anexo removido: ' || OLD.file_name || E'\n' ||
-                     '📋 Ficha: ' || COALESCE(card_title_text, 'Sem título') || E'\n' ||
-                     '📊 Detalhes do arquivo:' || E'\n' ||
-                     '• Tipo: ' || OLD.file_type || E'\n' ||
-                     '• Tamanho: ' || pg_size_pretty(OLD.file_size) || E'\n' ||
-                     '• Extensão: ' || OLD.file_extension || E'\n' ||
-                     '• Removido por: ' || v_author_name || ' (' || v_author_role || ')';
+  -- Criar conteÃºdo do comentÃ¡rio com tÃ­tulo da ficha
+  comment_content := 'ðŸ—‘ï¸ Anexo removido: ' || OLD.file_name || E'\n' ||
+                     'ðŸ“‹ Ficha: ' || COALESCE(card_title_text, 'Sem tÃ­tulo') || E'\n' ||
+                     'ðŸ“Š Detalhes do arquivo:' || E'\n' ||
+                     'â€¢ Tipo: ' || OLD.file_type || E'\n' ||
+                     'â€¢ Tamanho: ' || pg_size_pretty(OLD.file_size) || E'\n' ||
+                     'â€¢ ExtensÃ£o: ' || OLD.file_extension || E'\n' ||
+                     'â€¢ Removido por: ' || v_author_name || ' (' || v_author_role || ')';
 
-  -- Inserir comentário com título da ficha
+  -- Inserir comentÃ¡rio com tÃ­tulo da ficha
   INSERT INTO public.card_comments (card_id, parent_id, author_id, author_name, author_role, content, level, card_title)
   VALUES (
     OLD.card_id,
@@ -154,7 +154,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =====================================================
--- VERIFICAÇÃO - Execute após aplicar as mudanças
+-- VERIFICAÃ‡ÃƒO - Execute apÃ³s aplicar as mudanÃ§as
 -- =====================================================
 
 -- Verificar se as colunas foram adicionadas
@@ -175,6 +175,6 @@ SELECT
   author_name,
   content
 FROM public.card_comments 
-WHERE content LIKE '%📎 Anexo adicionado%'
+WHERE content LIKE '%ðŸ“Ž Anexo adicionado%'
 ORDER BY created_at DESC
 LIMIT 5;

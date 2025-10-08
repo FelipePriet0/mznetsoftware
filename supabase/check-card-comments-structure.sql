@@ -1,4 +1,4 @@
--- =====================================================
+﻿-- =====================================================
 -- SCRIPT PARA VERIFICAR ESTRUTURA DA TABELA card_comments
 -- Execute este script no Supabase SQL Editor para diagnosticar problemas
 -- =====================================================
@@ -23,7 +23,7 @@ SELECT
 FROM pg_constraint 
 WHERE conrelid = 'public.card_comments'::regclass;
 
--- 3. VERIFICAR SE AS FUNÇÕES EXISTEM
+-- 3. VERIFICAR SE AS FUNÃ‡Ã•ES EXISTEM
 SELECT 
   routine_name,
   routine_type,
@@ -51,7 +51,7 @@ SELECT
   COUNT(*) - COUNT(thread_id) as comments_without_thread_id
 FROM public.card_comments;
 
--- 6. MOSTRAR ALGUNS EXEMPLOS DE COMENTÁRIOS RECENTES
+-- 6. MOSTRAR ALGUNS EXEMPLOS DE COMENTÃRIOS RECENTES
 SELECT 
   id,
   card_id,

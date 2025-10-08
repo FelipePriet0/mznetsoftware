@@ -51,6 +51,7 @@ export function CommentsList({
   const [pendingReplyAttachments, setPendingReplyAttachments] = useState<any[]>([]);
   const [showReplyTaskModal, setShowReplyTaskModal] = useState(false);
   const [taskParentCommentId, setTaskParentCommentId] = useState<string | null>(null);
+  const [hasPendingTask, setHasPendingTask] = useState(false);
   
   // Estados para edição de tarefa
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
@@ -93,11 +94,116 @@ export function CommentsList({
   } = useAttachments(cardId);
 
   // Função para obter anexos de um comentário específico
-  const getAttachmentsForComment = (commentId: string) => {
-    // Filtrar anexos que pertencem a este comentário
-    return attachments.filter(attachment => 
+  const getAttachmentsForComment = (commentId: string, commentCardId: string, content?: string) => {
+    // Primeiro, tentar filtrar por comment_id (anexos novos)
+    let commentAttachments = attachments.filter(attachment => 
       attachment.comment_id === commentId
     );
+    
+    // Se não encontrar e o comentário tiver emoji de anexo, tentar match por nome de arquivo + card_id
+    if (commentAttachments.length === 0 && content && content.includes('📎')) {
+      // Extrair nome do arquivo do texto do comentário
+      const fileNameMatch = content.match(/📎 Anexo adicionado: (.+?)(?:\n|$)/);
+      // Extrair nome do card do texto do comentário (para fallback de anexos antigos)
+      const cardNameMatch = content.match(/📋 Ficha: (.+?)(?:\n|$)/);
+      
+      if (fileNameMatch) {
+        const fileName = fileNameMatch[1].trim();
+        const cardName = cardNameMatch ? cardNameMatch[1].trim() : null;
+        
+        // Buscar anexos que NÃO têm comment_id
+        const attachmentsWithoutComment = attachments.filter(a => !a.comment_id);
+        
+        console.log('🔍 DEBUG Match:', {
+          fileName,
+          cardName,
+          commentCardId,
+          totalAttachments: attachments.length,
+          attachmentsWithoutComment: attachmentsWithoutComment.length
+        });
+        
+        // Filtrar por nome de arquivo
+        let candidateAttachments = attachmentsWithoutComment.filter(attachment => 
+          attachment.file_name === fileName || 
+          attachment.file_name?.toLowerCase() === fileName.toLowerCase()
+        );
+        
+        console.log('🔍 Candidatos por nome de arquivo:', {
+          fileName,
+          candidates: candidateAttachments.length,
+          candidatesList: candidateAttachments.map(a => ({ 
+            id: a.id, 
+            file_name: a.file_name, 
+            file_path: a.file_path,
+            card_id: a.card_id
+          }))
+        });
+        
+        // Se tem múltiplos matches, filtrar por card_id (muito mais confiável!)
+        if (candidateAttachments.length > 1) {
+          // Priorizar anexos que pertencem ao card atual (card_id)
+          // ✅ Usar commentCardId em vez de cardId (card do comentário pode ser diferente do card atual)
+          const filteredByCardId = candidateAttachments.filter(attachment => 
+            attachment.card_id === commentCardId
+          );
+          
+          if (filteredByCardId.length > 0) {
+            console.log('🔍 Filtrando por card_id:', {
+              cardId,
+              beforeFilter: candidateAttachments.length,
+              afterFilter: filteredByCardId.length,
+              selected: filteredByCardId.map(a => ({ file_name: a.file_name, file_path: a.file_path }))
+            });
+            candidateAttachments = filteredByCardId;
+          } else if (cardName) {
+            // FALLBACK: Se não encontrou por card_id, tentar por nome no file_path (para anexos antigos)
+            const filteredByCard = candidateAttachments.filter(attachment => 
+              attachment.file_path?.includes(cardName) ||
+              attachment.file_path?.toLowerCase().includes(cardName.toLowerCase())
+            );
+            
+            if (filteredByCard.length > 0) {
+              console.log('🔍 Filtrando por nome do card no file_path (fallback):', {
+                cardName,
+                beforeFilter: candidateAttachments.length,
+                afterFilter: filteredByCard.length,
+                selected: filteredByCard.map(a => ({ file_name: a.file_name, file_path: a.file_path }))
+              });
+              candidateAttachments = filteredByCard;
+            }
+          }
+        }
+        
+        // Pegar o mais recente se ainda tiver múltiplos
+        if (candidateAttachments.length > 0) {
+          // Ordenar por created_at DESC e pegar o primeiro (mais recente)
+          commentAttachments = [candidateAttachments.sort((a, b) => 
+            new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+          )[0]];
+          
+          console.log('✅ Anexo selecionado:', {
+            fileName,
+            selected: commentAttachments.map(a => ({ 
+              id: a.id, 
+              file_name: a.file_name, 
+              file_path: a.file_path,
+              created_at: a.created_at
+            }))
+          });
+        } else {
+          console.log('❌ Nenhum anexo encontrado para:', fileName);
+        }
+      }
+    }
+    
+    console.log('🔍 getAttachmentsForComment:', {
+      commentId,
+      totalAttachments: attachments.length,
+      commentAttachments: commentAttachments.length,
+      allAttachments: attachments.map(a => ({ id: a.id, comment_id: a.comment_id, file_name: a.file_name, file_path: a.file_path }))
+    });
+    
+    return commentAttachments;
   };
 
   // Organizar comentários em árvore hierárquica
@@ -153,15 +259,44 @@ export function CommentsList({
 
   const handleDownloadAttachment = async (filePath: string, fileName: string) => {
     try {
-      console.log('CommentsList handleDownloadAttachment called with:', { filePath, fileName });
+      console.log('📥 [CommentsList] handleDownloadAttachment called with:', { 
+        filePath, 
+        fileName,
+        filePathType: typeof filePath,
+        fileNameType: typeof fileName
+      });
+      
       const url = await getDownloadUrl(filePath);
+      
+      console.log('📥 [CommentsList] Download URL obtained:', { 
+        url, 
+        urlType: typeof url,
+        success: !!url 
+      });
+      
       if (url) {
-        window.open(url, '_blank');
+        console.log('✅ [CommentsList] Abrindo URL para download:', url);
+        const newTab = window.open(url, '_blank');
+        
+        if (!newTab) {
+          console.error('❌ [CommentsList] Pop-up bloqueado! Tentando download direto...');
+          // Fallback: criar link e clicar
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = fileName;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          console.log('✅ [CommentsList] Download via link direto iniciado');
+        } else {
+          console.log('✅ [CommentsList] Nova aba aberta com sucesso');
+        }
       } else {
-        console.error('Failed to get download URL for:', filePath);
+        console.error('❌ [CommentsList] Failed to get download URL for:', filePath);
       }
     } catch (error) {
-      console.error('Error downloading attachment:', error);
+      console.error('❌ [CommentsList] Error downloading attachment:', error);
     }
   };
 
@@ -193,16 +328,34 @@ export function CommentsList({
       replyingTo,
       hasOnReply: !!onReply,
       contentLength: replyContent.trim().length,
+      hasPendingAttachments: pendingReplyAttachments.length > 0,
+      pendingAttachments: pendingReplyAttachments,
       targetComment: comments.find(c => c.id === replyingTo),
       allComments: comments.map(c => ({ id: c.id, level: c.level, threadId: c.threadId, parentId: c.parentId }))
     });
     
-    if (replyContent.trim() && replyingTo && onReply) {
+    // Permitir resposta apenas com anexos, tarefa OU com texto
+    const hasContent = replyContent.trim().length > 0;
+    const hasAttachments = pendingReplyAttachments.length > 0;
+    // Note: tarefas já criam comentário automaticamente via onCommentCreate
+    
+    console.log('🔍 DEBUG Validação:', {
+      hasContent,
+      hasAttachments,
+      canSubmit: (hasContent || hasAttachments) && replyingTo && !!onReply
+    });
+    
+    if ((hasContent || hasAttachments) && replyingTo && onReply) {
       try {
         console.log('🔍 DEBUG: Chamando onReply...');
         const startTime = Date.now();
         
-        const result = await onReply(replyingTo, replyContent.trim());
+        // Se não houver texto mas houver anexos, criar um comentário indicando o anexo
+        const contentToSend = hasContent 
+          ? replyContent.trim() 
+          : `📎 Anexo${pendingReplyAttachments.length > 1 ? 's' : ''} enviado${pendingReplyAttachments.length > 1 ? 's' : ''}`;
+        
+        const result = await onReply(replyingTo, contentToSend);
         
         const endTime = Date.now();
         console.log('🔍 DEBUG: onReply executado:', {
@@ -276,8 +429,21 @@ export function CommentsList({
     if (deletingComment && onDelete) {
       try {
         console.log('🔍 DEBUG: Excluindo comentário:', deletingComment);
-        await onDelete(deletingComment);
-        setDeletingComment(null);
+        const success = await onDelete(deletingComment);
+        console.log('🔍 DEBUG: Resultado da exclusão:', success);
+        
+        if (success) {
+          setDeletingComment(null);
+          
+          // IMPORTANTE: Recarregar comentários após exclusão
+          // para garantir sincronização com o banco de dados
+          if (onRefetch) {
+            console.log('🔍 DEBUG: Chamando onRefetch após exclusão...');
+            setTimeout(() => {
+              onRefetch();
+            }, 100);
+          }
+        }
       } catch (error) {
         console.error('🚨 ERRO ao excluir comentário:', error);
       }
@@ -301,8 +467,19 @@ export function CommentsList({
         id: `pending-${Date.now()}`,
         pending: true
       };
-      setPendingReplyAttachments(prev => [...prev, pendingAttachment]);
+      
+      console.log('📎 DEBUG: Anexo adicionado aos pendentes:', {
+        pendingAttachment,
+        totalPending: pendingReplyAttachments.length + 1
+      });
+      
+      setPendingReplyAttachments(prev => {
+        const newPending = [...prev, pendingAttachment];
+        console.log('📎 DEBUG: Estado atualizado, pendentes:', newPending.length);
+        return newPending;
+      });
       setReplyAttachments(prev => [...prev, data.file]);
+      setShowReplyAttachmentModal(false);
     } catch (error) {
       console.error('Error preparing attachment for reply:', error);
     }
@@ -478,7 +655,7 @@ export function CommentsList({
                       <div className="text-sm text-gray-700">
                         <CommentContentRenderer
                           content={comment.content}
-                          attachments={getAttachmentsForComment(comment.id)}
+                          attachments={getAttachmentsForComment(comment.id, comment.cardId, comment.content)}
                           onDownloadAttachment={handleDownloadAttachment}
                           onDeleteAttachment={handleDeleteAttachment}
                           cardId={cardId}
@@ -574,7 +751,7 @@ export function CommentsList({
                           <Button
                             size="sm"
                             onClick={handleReplySubmit}
-                            disabled={!replyContent.trim()}
+                            disabled={!replyContent.trim() && pendingReplyAttachments.length === 0}
                             className="bg-[#018942] hover:bg-[#018942]/90 text-white border-[#018942] hover:border-[#018942]/90 disabled:opacity-50"
                           >
                             <ArrowLeft className="h-3 w-3 mr-1 rotate-180" />
@@ -671,6 +848,7 @@ export function CommentsList({
         onClose={() => {
           setShowReplyTaskModal(false);
           setTaskParentCommentId(null);
+          setHasPendingTask(false);
         }}
         cardId={cardId}
         parentCommentId={taskParentCommentId || undefined}
@@ -678,6 +856,20 @@ export function CommentsList({
           // Criar resposta na conversa encadeada
           if (taskParentCommentId && onReply) {
             const result = await onReply(taskParentCommentId, content);
+            
+            // Resetar estado após criar a tarefa
+            if (result) {
+              setShowReplyTaskModal(false);
+              setTaskParentCommentId(null);
+              setHasPendingTask(false);
+              setReplyingTo(null); // Fechar campo de resposta
+              
+              // Atualizar comentários
+              if (onRefetch) {
+                onRefetch();
+              }
+            }
+            
             return result || null;
           }
           return null;

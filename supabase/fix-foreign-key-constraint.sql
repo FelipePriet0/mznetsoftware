@@ -1,8 +1,8 @@
--- =====================================================
+﻿-- =====================================================
 -- VERIFICAR E CORRIGIR FOREIGN KEY CONSTRAINT
 -- =====================================================
--- Este script verifica se a constraint card_tasks_assigned_to_fkey está correta
--- e se há problemas com usuários inexistentes
+-- Este script verifica se a constraint card_tasks_assigned_to_fkey estÃ¡ correta
+-- e se hÃ¡ problemas com usuÃ¡rios inexistentes
 
 -- 1. Verificar a constraint de foreign key
 SELECT 
@@ -22,9 +22,9 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
   AND tc.table_name = 'card_tasks'
   AND kcu.column_name = 'assigned_to';
 
--- 2. Verificar se há tarefas com assigned_to inválido
+-- 2. Verificar se hÃ¡ tarefas com assigned_to invÃ¡lido
 SELECT 
-  'Tarefas com assigned_to inválido' as info,
+  'Tarefas com assigned_to invÃ¡lido' as info,
   COUNT(*) as count
 FROM public.card_tasks ct
 WHERE NOT EXISTS (
@@ -32,9 +32,9 @@ WHERE NOT EXISTS (
   WHERE p.id = ct.assigned_to
 );
 
--- 3. Verificar se há tarefas com created_by inválido
+-- 3. Verificar se hÃ¡ tarefas com created_by invÃ¡lido
 SELECT 
-  'Tarefas com created_by inválido' as info,
+  'Tarefas com created_by invÃ¡lido' as info,
   COUNT(*) as count
 FROM public.card_tasks ct
 WHERE NOT EXISTS (
@@ -42,9 +42,9 @@ WHERE NOT EXISTS (
   WHERE p.id = ct.created_by
 );
 
--- 4. Verificar se há tarefas com card_id inválido
+-- 4. Verificar se hÃ¡ tarefas com card_id invÃ¡lido
 SELECT 
-  'Tarefas com card_id inválido' as info,
+  'Tarefas com card_id invÃ¡lido' as info,
   COUNT(*) as count
 FROM public.card_tasks ct
 WHERE NOT EXISTS (
@@ -52,18 +52,18 @@ WHERE NOT EXISTS (
   WHERE kc.id = ct.card_id
 );
 
--- 5. Mostrar usuários válidos para referência
+-- 5. Mostrar usuÃ¡rios vÃ¡lidos para referÃªncia
 SELECT 
-  'Usuários válidos para assigned_to' as info,
+  'UsuÃ¡rios vÃ¡lidos para assigned_to' as info,
   id,
   full_name,
   role
 FROM public.profiles
 ORDER BY role, full_name;
 
--- 6. Limpar tarefas com dados inválidos (se houver)
--- ATENÇÃO: Este comando pode deletar dados! Use com cuidado.
--- Descomente apenas se necessário:
+-- 6. Limpar tarefas com dados invÃ¡lidos (se houver)
+-- ATENÃ‡ÃƒO: Este comando pode deletar dados! Use com cuidado.
+-- Descomente apenas se necessÃ¡rio:
 /*
 DELETE FROM public.card_tasks 
 WHERE NOT EXISTS (
@@ -78,10 +78,10 @@ WHERE NOT EXISTS (
 );
 */
 
--- 7. Verificar se a constraint está funcionando
+-- 7. Verificar se a constraint estÃ¡ funcionando
 DO $$
 BEGIN
-  RAISE NOTICE '🔍 Verificando constraints de foreign key...';
-  RAISE NOTICE '✅ Se não houver erros acima, as constraints estão corretas!';
-  RAISE NOTICE '❌ Se houver tarefas com dados inválidos, elas precisam ser limpas.';
+  RAISE NOTICE 'ðŸ” Verificando constraints de foreign key...';
+  RAISE NOTICE 'âœ… Se nÃ£o houver erros acima, as constraints estÃ£o corretas!';
+  RAISE NOTICE 'âŒ Se houver tarefas com dados invÃ¡lidos, elas precisam ser limpas.';
 END $$;

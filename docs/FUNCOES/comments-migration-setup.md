@@ -1,23 +1,23 @@
-# 🔧 Correção: Aplicar Migração SQL para Sistema de Comentários
+﻿# ðŸ”§ CorreÃ§Ã£o: Aplicar MigraÃ§Ã£o SQL para Sistema de ComentÃ¡rios
 
-## 🚨 Problema Identificado
-O erro na aba "editar" está ocorrendo porque a tabela `card_comments` não existe no banco de dados Supabase. O sistema de comentários foi implementado no frontend, mas a migração SQL não foi aplicada no backend.
+## ðŸš¨ Problema Identificado
+O erro na aba "editar" estÃ¡ ocorrendo porque a tabela `card_comments` nÃ£o existe no banco de dados Supabase. O sistema de comentÃ¡rios foi implementado no frontend, mas a migraÃ§Ã£o SQL nÃ£o foi aplicada no backend.
 
-## ✅ Solução Aplicada (Frontend)
-- ✅ Adicionado tratamento de erro no hook `useComments`
-- ✅ Interface agora funciona mesmo sem a tabela (modo fallback)
-- ✅ Mensagem informativa para o usuário
-- ✅ Campo de observações continua funcionando normalmente
+## âœ… SoluÃ§Ã£o Aplicada (Frontend)
+- âœ… Adicionado tratamento de erro no hook `useComments`
+- âœ… Interface agora funciona mesmo sem a tabela (modo fallback)
+- âœ… Mensagem informativa para o usuÃ¡rio
+- âœ… Campo de observaÃ§Ãµes continua funcionando normalmente
 
-## 🗄️ Próximo Passo: Aplicar Migração no Supabase
+## ðŸ—„ï¸ PrÃ³ximo Passo: Aplicar MigraÃ§Ã£o no Supabase
 
 ### 1. Acessar Supabase Dashboard
-1. Vá para [https://app.supabase.com](https://app.supabase.com)
+1. VÃ¡ para [https://app.supabase.com](https://app.supabase.com)
 2. Selecione seu projeto
 3. Navegue para **SQL Editor**
 
-### 2. Executar Migração
-Copie e execute o conteúdo do arquivo:
+### 2. Executar MigraÃ§Ã£o
+Copie e execute o conteÃºdo do arquivo:
 ```
 supabase/migrations/20250103020000_add_card_comments.sql
 ```
@@ -127,32 +127,32 @@ $$;
 GRANT EXECUTE ON FUNCTION public.get_card_comments_with_hierarchy(uuid) TO authenticated;
 ```
 
-### 3. Verificar Migração
-Após executar o SQL, verifique se a tabela foi criada:
+### 3. Verificar MigraÃ§Ã£o
+ApÃ³s executar o SQL, verifique se a tabela foi criada:
 ```sql
 SELECT table_name FROM information_schema.tables 
 WHERE table_schema = 'public' AND table_name = 'card_comments';
 ```
 
 ### 4. Testar Sistema
-1. Recarregue a aplicação
+1. Recarregue a aplicaÃ§Ã£o
 2. Abra um card no modal "Editar"
-3. Os botões "Ver Conversas" e "Nova Conversa" devem aparecer
+3. Os botÃµes "Ver Conversas" e "Nova Conversa" devem aparecer
 4. Teste criar uma nova conversa
-5. Teste responder a comentários
+5. Teste responder a comentÃ¡rios
 
-## 🎯 Resultado Esperado
-Após aplicar a migração:
-- ✅ Botões de conversa aparecem normalmente
-- ✅ Sistema de comentários hierárquicos funciona
-- ✅ Anexos funcionam dentro de comentários
-- ✅ Interface visual com cores (azul/vermelho/verde)
+## ðŸŽ¯ Resultado Esperado
+ApÃ³s aplicar a migraÃ§Ã£o:
+- âœ… BotÃµes de conversa aparecem normalmente
+- âœ… Sistema de comentÃ¡rios hierÃ¡rquicos funciona
+- âœ… Anexos funcionam dentro de comentÃ¡rios
+- âœ… Interface visual com cores (azul/vermelho/verde)
 
-## 🆘 Se Ainda Houver Problemas
+## ðŸ†˜ Se Ainda Houver Problemas
 1. Verifique se a tabela `kanban_cards` existe
 2. Verifique se a tabela `profiles` existe
-3. Confirme se RLS está configurado corretamente
+3. Confirme se RLS estÃ¡ configurado corretamente
 4. Verifique logs do console do navegador
 
-## 📝 Nota
-O sistema agora está preparado para funcionar mesmo sem a migração (modo fallback), mas para usar todas as funcionalidades de comentários, a migração SQL deve ser aplicada.
+## ðŸ“ Nota
+O sistema agora estÃ¡ preparado para funcionar mesmo sem a migraÃ§Ã£o (modo fallback), mas para usar todas as funcionalidades de comentÃ¡rios, a migraÃ§Ã£o SQL deve ser aplicada.

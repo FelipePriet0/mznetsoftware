@@ -1,4 +1,4 @@
--- Create card-attachments storage bucket and policies
+﻿-- Create card-attachments storage bucket and policies
 -- This migration creates the Supabase Storage bucket for card attachments
 
 -- 1. Create the card-attachments bucket
@@ -82,25 +82,25 @@ BEGIN
 
   -- Create comment content
   comment_content := format(
-    '📎 Anexo adicionado: %s',
+    'ðŸ“Ž Anexo adicionado: %s',
     NEW.file_name
   );
   
   -- Add description if provided
   IF NEW.description IS NOT NULL AND NEW.description != '' THEN
     comment_content := comment_content || format(
-      E'\n\n📝 Descrição: %s',
+      E'\n\nðŸ“ DescriÃ§Ã£o: %s',
       NEW.description
     );
   END IF;
 
   -- Add file details
   comment_content := comment_content || format(
-    E'\n\n📊 Detalhes do arquivo:' ||
-    E'\n• Tipo: %s' ||
-    E'\n• Tamanho: %s bytes' ||
-    E'\n• Extensão: %s' ||
-    E'\n• Autor: %s (%s)',
+    E'\n\nðŸ“Š Detalhes do arquivo:' ||
+    E'\nâ€¢ Tipo: %s' ||
+    E'\nâ€¢ Tamanho: %s bytes' ||
+    E'\nâ€¢ ExtensÃ£o: %s' ||
+    E'\nâ€¢ Autor: %s (%s)',
     NEW.file_type,
     NEW.file_size,
     NEW.file_extension,
@@ -143,17 +143,17 @@ DECLARE
 BEGIN
   -- Create deletion comment content
   comment_content := format(
-    '🗑️ Anexo removido: %s',
+    'ðŸ—‘ï¸ Anexo removido: %s',
     OLD.file_name
   );
 
   -- Add file details for reference
   comment_content := comment_content || format(
-    E'\n\n📊 Detalhes do arquivo removido:' ||
-    E'\n• Tipo: %s' ||
-    E'\n• Tamanho: %s bytes' ||
-    E'\n• Extensão: %s' ||
-    E'\n• Removido por: %s (%s)',
+    E'\n\nðŸ“Š Detalhes do arquivo removido:' ||
+    E'\nâ€¢ Tipo: %s' ||
+    E'\nâ€¢ Tamanho: %s bytes' ||
+    E'\nâ€¢ ExtensÃ£o: %s' ||
+    E'\nâ€¢ Removido por: %s (%s)',
     OLD.file_type,
     OLD.file_size,
     OLD.file_extension,

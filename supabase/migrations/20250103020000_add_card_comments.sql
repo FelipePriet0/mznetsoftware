@@ -1,4 +1,4 @@
--- Create card_comments table for nested comment system
+﻿-- Create card_comments table for nested comment system
 CREATE TABLE IF NOT EXISTS public.card_comments (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     card_id uuid NOT NULL REFERENCES public.kanban_cards(id) ON DELETE CASCADE,

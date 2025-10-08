@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { CardAttachment } from '@/hooks/useAttachments';
 import { Button } from '@/components/ui/button';
 import { 
@@ -71,7 +71,7 @@ export function AttachmentDisplay({
             
             {/* File Size and Extension */}
             <div className="text-xs text-muted-foreground">
-              {formatFileSize(attachment.file_size)} • {attachment.file_extension.toUpperCase()}
+              {formatFileSize(attachment.file_size)} â€¢ {attachment.file_extension.toUpperCase()}
             </div>
             
             {/* Description */}
@@ -85,7 +85,7 @@ export function AttachmentDisplay({
             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
               <User className="h-3 w-3" />
               <span>{attachment.author_name}</span>
-              <span>•</span>
+              <span>â€¢</span>
               <Calendar className="h-3 w-3" />
               <span>
                 {formatDistanceToNow(new Date(attachment.created_at), { 
@@ -133,7 +133,7 @@ export function AttachmentDisplay({
         </div>
       </div>
 
-      {/* Modal de confirmação de exclusão */}
+      {/* Modal de confirmaÃ§Ã£o de exclusÃ£o */}
       <DeleteAttachmentDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}

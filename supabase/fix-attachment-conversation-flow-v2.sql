@@ -1,9 +1,9 @@
--- =====================================================
--- SCRIPT PARA INTEGRAR ANEXOS COM CONVERSAS ENCADEADAS - VERSÃO 2
+﻿-- =====================================================
+-- SCRIPT PARA INTEGRAR ANEXOS COM CONVERSAS ENCADEADAS - VERSÃƒO 2
 -- Execute este script no Supabase SQL Editor
 -- =====================================================
 
--- 1. ATUALIZAR FUNÇÃO PARA SEMPRE CRIAR NOVA CONVERSA NO CAMPO PRINCIPAL
+-- 1. ATUALIZAR FUNÃ‡ÃƒO PARA SEMPRE CRIAR NOVA CONVERSA NO CAMPO PRINCIPAL
 CREATE OR REPLACE FUNCTION public.create_attachment_comment()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -13,30 +13,30 @@ DECLARE
   v_author_role TEXT;
   new_thread_id TEXT;
 BEGIN
-  -- Buscar título do card
+  -- Buscar tÃ­tulo do card
   SELECT title INTO card_title_text
   FROM public.kanban_cards 
   WHERE id = NEW.card_id;
   
-  -- Obter informações do autor (com fallbacks)
+  -- Obter informaÃ§Ãµes do autor (com fallbacks)
   v_author_name := COALESCE(NEW.author_name, 'Sistema');
   v_author_role := COALESCE(NEW.author_role, 'Sistema');
   
   -- SEMPRE criar nova conversa para anexos do campo principal
-  -- (não integrar com conversas existentes)
+  -- (nÃ£o integrar com conversas existentes)
   new_thread_id := 'conversation_' || NEW.card_id || '_' || extract(epoch from now())::text || '_' || (random() * 1000000)::int::text;
   
-  -- Criar conteúdo do comentário com título da ficha
-  comment_content := '📎 Anexo adicionado: ' || NEW.file_name || E'\n' ||
-                     '📋 Ficha: ' || COALESCE(card_title_text, 'Sem título') || E'\n' ||
-                     (CASE WHEN NEW.description IS NOT NULL AND NEW.description != '' THEN '📝 Descrição: ' || NEW.description || E'\n' ELSE '' END) ||
-                     '📊 Detalhes do arquivo:' || E'\n' ||
-                     '• Tipo: ' || COALESCE(NEW.file_type, 'Desconhecido') || E'\n' ||
-                     '• Tamanho: ' || pg_size_pretty(NEW.file_size) || E'\n' ||
-                     '• Extensão: ' || COALESCE(NEW.file_extension, 'N/A') || E'\n' ||
-                     '• Autor: ' || v_author_name || ' (' || v_author_role || ')';
+  -- Criar conteÃºdo do comentÃ¡rio com tÃ­tulo da ficha
+  comment_content := 'ðŸ“Ž Anexo adicionado: ' || NEW.file_name || E'\n' ||
+                     'ðŸ“‹ Ficha: ' || COALESCE(card_title_text, 'Sem tÃ­tulo') || E'\n' ||
+                     (CASE WHEN NEW.description IS NOT NULL AND NEW.description != '' THEN 'ðŸ“ DescriÃ§Ã£o: ' || NEW.description || E'\n' ELSE '' END) ||
+                     'ðŸ“Š Detalhes do arquivo:' || E'\n' ||
+                     'â€¢ Tipo: ' || COALESCE(NEW.file_type, 'Desconhecido') || E'\n' ||
+                     'â€¢ Tamanho: ' || pg_size_pretty(NEW.file_size) || E'\n' ||
+                     'â€¢ ExtensÃ£o: ' || COALESCE(NEW.file_extension, 'N/A') || E'\n' ||
+                     'â€¢ Autor: ' || v_author_name || ' (' || v_author_role || ')';
 
-  -- Inserir comentário como nova conversa
+  -- Inserir comentÃ¡rio como nova conversa
   INSERT INTO public.card_comments (
     card_id, 
     parent_id, 
@@ -56,7 +56,7 @@ BEGIN
     v_author_name,
     v_author_role,
     comment_content,
-    0, -- Nível 0 (conversa principal)
+    0, -- NÃ­vel 0 (conversa principal)
     new_thread_id,
     true, -- Sempre inicia nova conversa
     card_title_text
@@ -65,12 +65,12 @@ BEGIN
   RETURN NEW;
 EXCEPTION
   WHEN OTHERS THEN
-    RAISE LOG 'Erro ao criar comentário de anexo: %', SQLERRM;
+    RAISE LOG 'Erro ao criar comentÃ¡rio de anexo: %', SQLERRM;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- 2. ATUALIZAR FUNÇÃO DE REMOÇÃO PARA MANTER NOVA CONVERSA
+-- 2. ATUALIZAR FUNÃ‡ÃƒO DE REMOÃ‡ÃƒO PARA MANTER NOVA CONVERSA
 CREATE OR REPLACE FUNCTION public.create_attachment_deletion_comment()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -80,23 +80,23 @@ DECLARE
   v_author_role TEXT;
   new_thread_id TEXT;
 BEGIN
-  -- Buscar título do card
+  -- Buscar tÃ­tulo do card
   SELECT title INTO card_title_text
   FROM public.kanban_cards 
   WHERE id = OLD.card_id;
   
-  -- Obter informações do autor (com fallbacks)
+  -- Obter informaÃ§Ãµes do autor (com fallbacks)
   v_author_name := COALESCE(OLD.author_name, 'Sistema');
   v_author_role := COALESCE(OLD.author_role, 'Sistema');
   
-  -- SEMPRE criar nova conversa para remoção de anexo
+  -- SEMPRE criar nova conversa para remoÃ§Ã£o de anexo
   new_thread_id := 'deletion_' || OLD.card_id || '_' || extract(epoch from now())::text || '_' || (random() * 1000000)::int::text;
   
-  -- Criar conteúdo do comentário de remoção
-  comment_content := '🗑️ Anexo removido: ' || OLD.file_name || E'\n' ||
-                     '📋 Ficha: ' || COALESCE(card_title_text, 'Sem título');
+  -- Criar conteÃºdo do comentÃ¡rio de remoÃ§Ã£o
+  comment_content := 'ðŸ—‘ï¸ Anexo removido: ' || OLD.file_name || E'\n' ||
+                     'ðŸ“‹ Ficha: ' || COALESCE(card_title_text, 'Sem tÃ­tulo');
 
-  -- Inserir comentário de remoção como nova conversa
+  -- Inserir comentÃ¡rio de remoÃ§Ã£o como nova conversa
   INSERT INTO public.card_comments (
     card_id, 
     parent_id, 
@@ -116,7 +116,7 @@ BEGIN
     v_author_name,
     v_author_role,
     comment_content,
-    0, -- Nível 0 (conversa principal)
+    0, -- NÃ­vel 0 (conversa principal)
     new_thread_id,
     true, -- Sempre inicia nova conversa
     card_title_text
@@ -125,10 +125,10 @@ BEGIN
   RETURN OLD;
 EXCEPTION
   WHEN OTHERS THEN
-    RAISE LOG 'Erro ao criar comentário de remoção de anexo: %', SQLERRM;
+    RAISE LOG 'Erro ao criar comentÃ¡rio de remoÃ§Ã£o de anexo: %', SQLERRM;
     RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
 
--- 3. COMENTÁRIO DE CONFIRMAÇÃO
+-- 3. COMENTÃRIO DE CONFIRMAÃ‡ÃƒO
 SELECT 'Anexos do campo principal sempre criam nova conversa!' as status;

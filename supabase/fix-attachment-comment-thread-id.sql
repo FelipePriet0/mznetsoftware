@@ -1,9 +1,9 @@
--- =====================================================
--- SCRIPT PARA CORRIGIR THREAD_ID EM COMENTÁRIOS DE ANEXO
+﻿-- =====================================================
+-- SCRIPT PARA CORRIGIR THREAD_ID EM COMENTÃRIOS DE ANEXO
 -- Execute este script no Supabase SQL Editor
 -- =====================================================
 
--- 1. ATUALIZAR FUNÇÃO DE COMENTÁRIO AUTOMÁTICO PARA INCLUIR THREAD_ID
+-- 1. ATUALIZAR FUNÃ‡ÃƒO DE COMENTÃRIO AUTOMÃTICO PARA INCLUIR THREAD_ID
 CREATE OR REPLACE FUNCTION public.create_attachment_comment()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -11,25 +11,25 @@ DECLARE
   card_title_text TEXT;
   new_thread_id TEXT;
 BEGIN
-  -- Buscar título do card
+  -- Buscar tÃ­tulo do card
   SELECT title INTO card_title_text
   FROM public.kanban_cards 
   WHERE id = NEW.card_id;
   
-  -- Gerar um thread_id único para comentários de anexo
+  -- Gerar um thread_id Ãºnico para comentÃ¡rios de anexo
   new_thread_id := 'attachment_' || NEW.card_id || '_' || extract(epoch from now())::text || '_' || (random() * 1000000)::int::text;
   
-  -- Criar conteúdo do comentário com título da ficha
-  comment_content := '📎 Anexo adicionado: ' || NEW.file_name || E'\n' ||
-                     '📋 Ficha: ' || COALESCE(card_title_text, 'Sem título') || E'\n' ||
-                     (CASE WHEN NEW.description IS NOT NULL THEN '📝 Descrição: ' || NEW.description || E'\n' ELSE '' END) ||
-                     '📊 Detalhes do arquivo:' || E'\n' ||
-                     '• Tipo: ' || NEW.file_type || E'\n' ||
-                     '• Tamanho: ' || pg_size_pretty(NEW.file_size) || E'\n' ||
-                     '• Extensão: ' || NEW.file_extension || E'\n' ||
-                     '• Autor: ' || NEW.author_name || ' (' || NEW.author_role || ')';
+  -- Criar conteÃºdo do comentÃ¡rio com tÃ­tulo da ficha
+  comment_content := 'ðŸ“Ž Anexo adicionado: ' || NEW.file_name || E'\n' ||
+                     'ðŸ“‹ Ficha: ' || COALESCE(card_title_text, 'Sem tÃ­tulo') || E'\n' ||
+                     (CASE WHEN NEW.description IS NOT NULL THEN 'ðŸ“ DescriÃ§Ã£o: ' || NEW.description || E'\n' ELSE '' END) ||
+                     'ðŸ“Š Detalhes do arquivo:' || E'\n' ||
+                     'â€¢ Tipo: ' || NEW.file_type || E'\n' ||
+                     'â€¢ Tamanho: ' || pg_size_pretty(NEW.file_size) || E'\n' ||
+                     'â€¢ ExtensÃ£o: ' || NEW.file_extension || E'\n' ||
+                     'â€¢ Autor: ' || NEW.author_name || ' (' || NEW.author_role || ')';
 
-  -- Inserir comentário com thread_id e estrutura hierárquica
+  -- Inserir comentÃ¡rio com thread_id e estrutura hierÃ¡rquica
   INSERT INTO public.card_comments (
     card_id, 
     parent_id, 
@@ -59,7 +59,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 2. ATUALIZAR FUNÇÃO DE COMENTÁRIO DE REMOÇÃO PARA INCLUIR THREAD_ID
+-- 2. ATUALIZAR FUNÃ‡ÃƒO DE COMENTÃRIO DE REMOÃ‡ÃƒO PARA INCLUIR THREAD_ID
 CREATE OR REPLACE FUNCTION public.create_attachment_deletion_comment()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -69,19 +69,19 @@ DECLARE
   v_author_role text;
   new_thread_id TEXT;
 BEGIN
-  -- Buscar título do card
+  -- Buscar tÃ­tulo do card
   SELECT title INTO card_title_text
   FROM public.kanban_cards 
   WHERE id = OLD.card_id;
   
-  -- Gerar um thread_id único para comentários de remoção de anexo
+  -- Gerar um thread_id Ãºnico para comentÃ¡rios de remoÃ§Ã£o de anexo
   new_thread_id := 'deletion_' || OLD.card_id || '_' || extract(epoch from now())::text || '_' || (random() * 1000000)::int::text;
   
-  -- Criar conteúdo do comentário de remoção
-  comment_content := '🗑️ Anexo removido: ' || OLD.file_name || E'\n' ||
-                     '📋 Ficha: ' || COALESCE(card_title_text, 'Sem título');
+  -- Criar conteÃºdo do comentÃ¡rio de remoÃ§Ã£o
+  comment_content := 'ðŸ—‘ï¸ Anexo removido: ' || OLD.file_name || E'\n' ||
+                     'ðŸ“‹ Ficha: ' || COALESCE(card_title_text, 'Sem tÃ­tulo');
 
-  -- Inserir comentário de remoção com thread_id e estrutura hierárquica
+  -- Inserir comentÃ¡rio de remoÃ§Ã£o com thread_id e estrutura hierÃ¡rquica
   INSERT INTO public.card_comments (
     card_id, 
     parent_id, 
@@ -111,5 +111,5 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 3. COMENTÁRIO DE CONFIRMAÇÃO
-SELECT 'Funções de comentário de anexo atualizadas com thread_id!' as status;
+-- 3. COMENTÃRIO DE CONFIRMAÃ‡ÃƒO
+SELECT 'FunÃ§Ãµes de comentÃ¡rio de anexo atualizadas com thread_id!' as status;

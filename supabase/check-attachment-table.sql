@@ -1,4 +1,4 @@
--- VERIFICAR DADOS NA TABELA card_attachments
+﻿-- VERIFICAR DADOS NA TABELA card_attachments
 SELECT 
     id,
     card_id,
@@ -10,7 +10,7 @@ FROM public.card_attachments
 ORDER BY created_at DESC
 LIMIT 10;
 
--- VERIFICAR COMENTÁRIOS DE ANEXO
+-- VERIFICAR COMENTÃRIOS DE ANEXO
 SELECT 
     id,
     card_id,
@@ -18,6 +18,6 @@ SELECT
     created_at,
     author_name
 FROM public.card_comments
-WHERE content LIKE '%📎 Anexo adicionado%'
+WHERE content LIKE '%ðŸ“Ž Anexo adicionado%'
 ORDER BY created_at DESC
 LIMIT 5;

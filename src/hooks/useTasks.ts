@@ -22,7 +22,6 @@ export function useTasks(userId?: string, cardId?: string) {
         .select(`
           id,
           card_id,
-          card_title,
           created_by,
           assigned_to,
           description,
@@ -60,7 +59,6 @@ export function useTasks(userId?: string, cardId?: string) {
       const mappedTasks: Task[] = (data || []).map((task: any) => ({
         id: task.id,
         card_id: task.card_id,
-        card_title: task.card_title,
         created_by: task.created_by,
         assigned_to: task.assigned_to,
         description: task.description,
@@ -107,7 +105,6 @@ export function useTasks(userId?: string, cardId?: string) {
         .select(`
           id,
           card_id,
-          card_title,
           created_by,
           assigned_to,
           description,
@@ -127,7 +124,6 @@ export function useTasks(userId?: string, cardId?: string) {
       const newTask: Task = {
         id: result.id,
         card_id: result.card_id,
-        card_title: result.card_title,
         created_by: result.created_by,
         assigned_to: result.assigned_to,
         description: result.description,
@@ -247,7 +243,6 @@ export function useTasks(userId?: string, cardId?: string) {
         .select(`
           id,
           card_id,
-          card_title,
           created_by,
           assigned_to,
           description,
@@ -280,7 +275,6 @@ export function useTasks(userId?: string, cardId?: string) {
         const syncedTask: Task = {
           id: updatedData.id,
           card_id: updatedData.card_id,
-          card_title: updatedData.card_title,
           created_by: updatedData.created_by,
           assigned_to: updatedData.assigned_to,
           description: updatedData.description,
@@ -309,20 +303,29 @@ export function useTasks(userId?: string, cardId?: string) {
     }
   };
 
-  // Deletar tarefa
+  // Deletar tarefa (SOFT DELETE)
   const deleteTask = async (taskId: string): Promise<boolean> => {
     try {
+      console.log('🗑️ [useTasks] Soft delete da tarefa:', taskId);
+      
       const { error: deleteError } = await (supabase as any)
         .from('card_tasks')
-        .delete()
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: (await supabase.auth.getUser()).data.user?.id
+        })
         .eq('id', taskId);
 
       if (deleteError) throw deleteError;
 
-      setTasks(prev => prev.filter(task => task.id !== taskId));
+      // Recarregar tarefas do banco para garantir sincronização
+      console.log('🔄 [useTasks] Recarregando tarefas após exclusão...');
+      await loadTasks();
+      
+      console.log('✅ [useTasks] Tarefa deletada com sucesso');
       return true;
     } catch (err: any) {
-      console.error('Error deleting task:', err);
+      console.error('❌ [useTasks] Erro ao deletar tarefa:', err);
       setError(err.message || 'Erro ao deletar tarefa');
       return false;
     }

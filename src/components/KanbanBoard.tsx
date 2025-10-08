@@ -92,31 +92,19 @@ export interface CardItem {
   cpf?: string;
   receivedAt: string; // ISO
   deadline: string; // ISO
-  responsavel?: string;
+  responsavel?: string; // Nome do responsável (assignee)
+  responsavelId?: string; // UUID do responsável (assignee_id do banco)
   telefone?: string;
   email?: string;
   naturalidade?: string;
   uf?: string;
   applicantId?: string;
-  score?: number;
-  checks: {
-    moradia: boolean;
-    emprego: boolean;
-    vinculos: boolean;
-  };
   parecer: string;
   columnId: ColumnId;
   createdAt: string; // ISO
   updatedAt: string; // ISO
   lastMovedAt: string; // ISO
   labels: string[];
-  companyId?: string;
-  companyName?: string;
-  companyLogoUrl?: string | null;
-  assignedReanalyst?: string;
-  reanalystName?: string;
-  reanalystAvatarUrl?: string;
-  analystName?: string;
   // Comercial stage persisted in DB
   commercialStage?: 'entrada' | 'feitas' | 'aguardando' | 'canceladas' | 'concluidas';
   // Área atual do card (comercial ou analise)
@@ -268,11 +256,11 @@ export default function KanbanBoard() {
           email,
           received_at,
           due_at,
-          priority,
           source,
-          labels,
-          applicant:applicant_id ( id, primary_name, city, uf, email )
+          applicant:applicant_id ( id, primary_name, city, uf, email ),
+          assignee:assignee_id ( id, full_name )
         `)
+        .is('deleted_at', null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       if (!data) return;
@@ -285,14 +273,13 @@ export default function KanbanBoard() {
           cpf: row.cpf_cnpj ?? '',
           receivedAt,
           deadline,
-          responsavel: undefined,
+          responsavel: row.assignee?.full_name ?? undefined,
+          responsavelId: row.assignee_id ?? undefined,
           telefone: row.phone ?? undefined,
           email: row.email ?? row.applicant?.email ?? undefined,
           naturalidade: row.applicant?.city ?? undefined,
           uf: row.applicant?.uf ?? undefined,
           applicantId: row.applicant?.id ?? undefined,
-          score: undefined,
-          checks: { moradia: false, emprego: false, vinculos: false },
           parecer: '',
           columnId: ((): ColumnId => {
             if (row.area === 'comercial') {
@@ -311,14 +298,7 @@ export default function KanbanBoard() {
           createdAt: receivedAt,
           updatedAt: receivedAt,
           lastMovedAt: receivedAt,
-          labels: row.labels ?? [],
-          companyId: undefined,
-          companyName: undefined,
-          companyLogoUrl: undefined,
-          assignedReanalyst: undefined,
-          reanalystName: undefined,
-          reanalystAvatarUrl: undefined,
-          analystName: undefined,
+          labels: [],
           commercialStage: row.area === 'comercial' ? ((): any => {
             const m: any = { entrada: 'entrada', feitas: 'feitas', aguardando_doc: 'aguardando', canceladas: 'canceladas', concluidas: 'concluidas' };
             return m[row.stage] ?? 'entrada';
@@ -535,10 +515,9 @@ export default function KanbanBoard() {
       const matchesPrazo =
         prazoFiltro === "todos" || (prazoFiltro === "hoje" ? isHoje : isAtrasado);
 
-      // View filter for reanalysts
+      // View filter
       const matchesView = viewFilter === "all" || 
-                         (viewFilter === "mine" && c.assignedReanalyst === profile?.id) ||
-                         (viewFilter === "company" && c.companyId === profile?.company_id);
+                         (viewFilter === "mine" && c.responsavelId === profile?.id);
 
       return matchesQuery && matchesResp && matchesPrazo && matchesView;
     });
@@ -858,38 +837,101 @@ useEffect(() => {
     }
   }
 
-  function setResponsavel(cardId: string, resp: string) {
-    setCards((prev) =>
-      prev.map((c) => {
-        if (c.id !== cardId) return c;
-        const nextLabels = new Set(c.labels);
-        if (resp) nextLabels.add("Em Análise");
-        const isInRecebido = c.columnId === "recebido";
-        return {
-          ...c,
-          responsavel: resp,
-          labels: Array.from(nextLabels),
-          columnId: allowMove && isInRecebido ? "em_analise" : c.columnId,
-          lastMovedAt: allowMove && isInRecebido ? new Date().toISOString() : c.lastMovedAt,
-        };
-      })
-    );
+  async function setResponsavel(cardId: string, resp: string) {
+    try {
+      // Determinar assigneeId a partir do argumento recebido
+      // Caso resp já seja um UUID, usar direto; caso contrário, tentar resolver pelo nome
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      let assigneeId: string | null = null;
+
+      if (uuidRegex.test(resp)) {
+        assigneeId = resp;
+      } else {
+        // Tentar buscar por nome completo
+        const { data: byName } = await (supabase as any)
+          .from('profiles')
+          .select('id')
+          .eq('full_name', resp)
+          .maybeSingle();
+        assigneeId = byName?.id || null;
+
+        // Fallback: se não achou pelo nome, usar o próprio usuário autenticado (caso "Ingressar")
+        if (!assigneeId && profile?.id) {
+          assigneeId = profile.id;
+        }
+      }
+      
+      // Salvar no banco
+      const { error: updateError } = await (supabase as any)
+        .from('kanban_cards')
+        .update({ assignee_id: assigneeId })
+        .eq('id', cardId);
+      if (updateError) {
+        console.error('Erro ao atualizar assignee_id:', updateError);
+        throw updateError;
+      }
+      
+      // Atualizar estado local
+      setCards((prev) =>
+        prev.map((c) => {
+          if (c.id !== cardId) return c;
+          const nextLabels = new Set(c.labels);
+          if (resp) nextLabels.add("Em Análise");
+          const isInRecebido = c.columnId === "recebido";
+          return {
+            ...c,
+            // Se resp era um UUID, manter nome antigo; caso contrário, usar resp como nome
+            responsavel: uuidRegex.test(resp) ? c.responsavel : resp,
+            responsavelId: assigneeId || undefined,
+            labels: Array.from(nextLabels),
+            columnId: allowMove && isInRecebido ? "em_analise" : c.columnId,
+            lastMovedAt: allowMove && isInRecebido ? new Date().toISOString() : c.lastMovedAt,
+          };
+        })
+      );
+
+      // Recarregar para refletir o nome correto a partir do banco
+      setTimeout(() => loadApplications(), 100);
+    } catch (error) {
+      console.error('Erro ao atribuir responsável:', error);
+      toast({ 
+        title: 'Erro ao atribuir responsável', 
+        variant: 'destructive' 
+      });
+    }
   }
   
-  function unassignAndReturn(cardId: string) {
+  async function unassignAndReturn(cardId: string) {
     if (import.meta?.env?.DEV) console.log("unassignAndReturn called", cardId);
-    setCards((prev) =>
-      prev.map((c) => {
-        if (c.id !== cardId) return c;
-        return {
-          ...c,
-          responsavel: undefined,
-          columnId: "recebido",
-          labels: c.labels.filter((l) => l !== "Em Análise"),
-          lastMovedAt: new Date().toISOString(),
-        };
-      })
-    );
+    
+    try {
+      // Remover assignee no banco
+      await (supabase as any)
+        .from('kanban_cards')
+        .update({ assignee_id: null })
+        .eq('id', cardId);
+      
+      // Atualizar estado local
+      setCards((prev) =>
+        prev.map((c) => {
+          if (c.id !== cardId) return c;
+          return {
+            ...c,
+            responsavel: undefined,
+            responsavelId: undefined,
+            columnId: "recebido",
+            labels: c.labels.filter((l) => l !== "Em Análise"),
+            lastMovedAt: new Date().toISOString(),
+          };
+        })
+      );
+    } catch (error) {
+      console.error('Erro ao desingressar:', error);
+      toast({ 
+        title: 'Erro ao desingressar', 
+        variant: 'destructive' 
+      });
+    }
   }
 
   async function openEdit(card: CardItem) {
@@ -901,6 +943,7 @@ useEffect(() => {
         .from('kanban_cards')
         .select('*')
         .eq('id', card.id)
+        .is('deleted_at', null)
         .single();
       
       if (error) {
@@ -937,6 +980,8 @@ useEffect(() => {
   const handleIngressar = async (card: CardItem) => {
     try {
       if (import.meta?.env?.DEV) console.log('Ingressando na ficha:', card.id, 'alterando para: analise/em_analise');
+      
+      // 1. Primeiro muda o stage
       const { error } = await (supabase as any).rpc('change_stage', {
         p_card_id: card.id,
         p_to_area: 'analise',
@@ -946,18 +991,20 @@ useEffect(() => {
 
       if (error) throw error;
       
-      // Reload applications data instead of page
-      await loadApplications();
+      // 2. Depois atribui o responsável (usuário atual)
+      if (profile?.id) {
+        await setResponsavel(card.id, profile.id);
+      }
       
       toast({
         title: "Sucesso",
-        description: "Ficha movida para Em Análise",
+        description: "Ficha movida para Em Análise e atribuída",
       });
     } catch (error) {
       if (import.meta?.env?.DEV) console.error('Erro ao ingressar:', error);
       toast({
         title: "Erro",
-        description: "Erro ao mover ficha",
+        description: "Erro ao ingressar na ficha",
         variant: "destructive",
       });
     }
@@ -1407,13 +1454,12 @@ useEffect(() => {
                 receivedAt: created.received_at,
                 deadline: created.received_at,
                 responsavel: undefined,
+                responsavelId: undefined,
                 telefone: created.phone || undefined,
                 email: created.email || undefined,
                 naturalidade: data.naturalidade,
                 uf: data.uf,
                 applicantId: applicant.id,
-                score: undefined,
-                checks: { moradia: false, emprego: false, vinculos: false },
                 parecer: '',
                 columnId: 'recebido',
                 createdAt: new Date().toISOString(),
@@ -1451,25 +1497,18 @@ useEffect(() => {
         receivedAt: created.received_at || new Date().toISOString(),
         deadline: created.received_at || new Date().toISOString(),
         responsavel: undefined,
+        responsavelId: undefined,
         telefone: created.phone || undefined,
         email: created.email || undefined,
         naturalidade: undefined,
         uf: undefined,
         applicantId: created.applicant_id,
-        score: undefined,
-        checks: { moradia: false, emprego: false, vinculos: false },
         parecer: '',
         columnId: 'recebido',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         lastMovedAt: new Date().toISOString(),
         labels: [],
-        companyId: undefined,
-        companyName: undefined,
-        companyLogoUrl: undefined,
-        assignedReanalyst: undefined,
-        reanalystName: undefined,
-        reanalystAvatarUrl: undefined,
         analystName: currentUserName,
       } as any;
       setMockCard(newCard);
@@ -1486,21 +1525,34 @@ useEffect(() => {
           if (!cardToDelete) return;
           
           try {
-            if (import.meta?.env?.DEV) console.log('Attempting to delete application:', cardToDelete.id, 'with reason:', reason);
+            console.log('🗑️ [DEBUG] Soft delete de card:', cardToDelete.id, 'motivo:', reason);
+            
+            // SOFT DELETE (não deleta permanentemente!)
+            console.log('🔍 [DEBUG] Profile ID:', profile?.id);
+            console.log('🔍 [DEBUG] Fazendo UPDATE no banco...');
             
             const { error } = await (supabase as any)
               .from('kanban_cards')
-              .delete()
+              .update({
+                deleted_at: new Date().toISOString(),
+                deleted_by: profile?.id,
+                deletion_reason: reason
+              })
               .eq('id', cardToDelete.id);
+              
+            console.log('🔍 [DEBUG] Resultado do UPDATE:', { error });
 
             if (error) {
-              if (import.meta?.env?.DEV) console.error('Supabase delete error:', error);
+              console.error('🚨 [DEBUG] Erro ao fazer soft delete:', error);
               throw error;
             }
+            
+            console.log('✅ [DEBUG] Soft delete bem-sucedido! Removendo do front...');
+            // Remover do estado local (UI) - card continua no banco marcado como deletado
             setCards(prev => prev.filter(c => c.id !== cardToDelete.id));
             toast({ title: "Ficha deletada com sucesso" });
           } catch (error: any) {
-            if (import.meta?.env?.DEV) console.error('Error deleting application:', error);
+            console.error('🚨 [DEBUG] Error deleting application:', error);
             toast({
               title: "Erro ao deletar ficha",
               variant: "destructive",
@@ -1617,8 +1669,7 @@ function KanbanCard({
   const msUntil = new Date(card.deadline).getTime() - Date.now();
   const onFire = fireColumns.has(card.columnId) && msUntil >= 0 && msUntil <= 24 * 60 * 60 * 1000;
 
-  const companyName = card.companyName ?? "Empresa";
-  const companyReanalysts = reanalysts.filter(r => r.company_id === card.companyId);
+  // Sistema de empresas removido (não usado)
 
   const handleReassign = async (reanalystId: string) => {
     try {
@@ -1699,52 +1750,9 @@ function KanbanCard({
 
 <div className="p-3 border-b flex items-center justify-between">
   <div className="flex items-center gap-2">
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {card.companyLogoUrl ? (
-            <img
-              src={card.companyLogoUrl}
-              alt={`Logo da empresa ${companyName}`}
-              width={24}
-              height={24}
-              loading="lazy"
-              className="h-6 w-6 rounded-sm object-contain"
-            />
-          ) : (
-            <div
-              className="h-6 w-6 flex items-center justify-center rounded-sm border bg-muted text-base"
-              aria-label={`Empresa: ${companyName}`}
-            >
-              🏢
-            </div>
-          )}
-        </TooltipTrigger>
-        <TooltipContent>Empresa: {companyName}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
     <div className="font-medium">{card.nome}</div>
   </div>
   <div className="flex items-center gap-1">
-    {premium && card.assignedReanalyst && companyReanalysts.length > 0 && (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" data-ignore-card-click>
-            <Edit className="h-3 w-3" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          {companyReanalysts.map((reanalyst) => (
-            <DropdownMenuItem
-              key={reanalyst.id}
-              onClick={() => handleReassign(reanalyst.id)}
-            >
-              {reanalyst.full_name}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    )}
     {headerBadges}
   </div>
 </div>
@@ -1768,53 +1776,7 @@ function KanbanCard({
           </div>
         </div>
 
-        {/* Reanalyst Assignment Display */}
-        {card.assignedReanalyst && (
-          <div className="flex items-center gap-2 text-sm">
-            <Avatar className="w-5 h-5">
-              <AvatarImage src={card.reanalystAvatarUrl} />
-              <AvatarFallback className="text-[10px]">
-                {card.reanalystName?.charAt(0) || <User className="w-3 h-3" />}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-foreground font-medium">Reanalista: </span>
-            <span className="text-muted-foreground">{card.reanalystName || 'Reanalista'}</span>
-          </div>
-        )}
 
-        {/* No Reanalyst Warning */}
-        {!card.assignedReanalyst && ['aprovado', 'negado', 'reanalise'].includes(card.columnId) && (
-          <div className="flex items-center gap-2">
-            <Badge variant="destructive" className="text-[10px] px-1 py-0">
-              Sem responsável
-            </Badge>
-            {premium && companyReanalysts.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-5 text-[10px] px-1" data-ignore-card-click>
-                    Atribuir
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {companyReanalysts.map((reanalyst) => (
-                    <DropdownMenuItem
-                      key={reanalyst.id}
-                      onClick={() => handleReassign(reanalyst.id)}
-                    >
-                      {reanalyst.full_name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-          <Badge variant={card.checks.moradia ? "default" : "secondary"}>Moradia</Badge>
-          <Badge variant={card.checks.emprego ? "default" : "secondary"}>Emprego</Badge>
-          <Badge variant={card.checks.vinculos ? "default" : "secondary"}>Vínculos</Badge>
-        </div>
         <div className="text-sm">
           <span className="font-medium">Parecer: </span>
           <span className="text-muted-foreground">{card.parecer || "—"}</span>

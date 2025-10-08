@@ -1,4 +1,4 @@
--- DEBUG: VERIFICAR CAMINHOS DOS ARQUIVOS NO STORAGE VS TABELA
+﻿-- DEBUG: VERIFICAR CAMINHOS DOS ARQUIVOS NO STORAGE VS TABELA
 
 -- 1. VERIFICAR ARQUIVOS NO STORAGE
 SELECT 
@@ -23,7 +23,7 @@ FROM public.card_attachments
 ORDER BY created_at DESC
 LIMIT 10;
 
--- 3. VERIFICAR COMENTÁRIOS DE ANEXO
+-- 3. VERIFICAR COMENTÃRIOS DE ANEXO
 SELECT 
     'COMMENT' as source,
     id,
@@ -31,7 +31,7 @@ SELECT
     created_at,
     author_name
 FROM public.card_comments
-WHERE content LIKE '%📎 Anexo adicionado%'
+WHERE content LIKE '%ðŸ“Ž Anexo adicionado%'
 ORDER BY created_at DESC
 LIMIT 5;
 

@@ -222,7 +222,7 @@ export default function NovaFichaComercialForm({ onSubmit, onCancel, initialValu
       try {
         const { data, error } = await supabase
           .from('kanban_cards')
-          .select('reanalysis_notes, comments, comments_short')
+          .select('reanalysis_notes')
           .eq('id', applicationId)
           .maybeSingle();
         if (error) return;
@@ -232,20 +232,6 @@ export default function NovaFichaComercialForm({ onSubmit, onCancel, initialValu
           else if (typeof data.reanalysis_notes === 'string') {
             try { notes = JSON.parse(data.reanalysis_notes) || []; } catch {}
           }
-        }
-        if ((!notes || notes.length === 0) && (data?.comments || data?.comments_short)) {
-          notes = [{ 
-            id: crypto.randomUUID(), 
-            author_id: 'legacy', 
-            author_name: 'Sistema', 
-            author_role: '—', 
-            created_at: new Date().toISOString(), 
-            text: data.comments || data.comments_short,
-            parent_id: null,
-            level: 0,
-            thread_id: crypto.randomUUID(),
-            is_thread_starter: true
-          }];
         }
         
         // Migrar pareceres antigos que não têm estrutura hierárquica
@@ -316,7 +302,7 @@ export default function NovaFichaComercialForm({ onSubmit, onCancel, initialValu
       try {
         const { error } = await supabase
           .from('kanban_cards')
-          .update({ reanalysis_notes: serialized, comments: text, comments_short: text })
+          .update({ reanalysis_notes: serialized })
           .eq('id', applicationId);
         if (error) throw error;
         
@@ -385,7 +371,7 @@ export default function NovaFichaComercialForm({ onSubmit, onCancel, initialValu
       try {
         const { error } = await supabase
           .from('kanban_cards')
-          .update({ reanalysis_notes: serialized, comments: text, comments_short: text })
+          .update({ reanalysis_notes: serialized })
           .eq('id', applicationId);
         if (error) throw error;
         
@@ -544,13 +530,6 @@ export default function NovaFichaComercialForm({ onSubmit, onCancel, initialValu
       
       // Preparar dados para update
       const updateData: any = { reanalysis_notes: serialized };
-      
-      // Se a lista ficou vazia, também limpar os campos legados
-      if (updated.length === 0) {
-        console.log('📝 [Comercial] Lista vazia - limpando também campos legados (comments, comments_short)');
-        updateData.comments = null;
-        updateData.comments_short = null;
-      }
       
       // Salvar no banco
       const { error } = await supabase

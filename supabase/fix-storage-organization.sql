@@ -1,9 +1,9 @@
--- =====================================================
--- SCRIPT PARA CORRIGIR ORGANIZAÇÃO DO STORAGE
+﻿-- =====================================================
+-- SCRIPT PARA CORRIGIR ORGANIZAÃ‡ÃƒO DO STORAGE
 -- Execute este script no Supabase SQL Editor
 -- =====================================================
 
--- 1. VERIFICAR ARQUIVOS QUE ESTÃO FORA DAS PASTAS DOS CARDS
+-- 1. VERIFICAR ARQUIVOS QUE ESTÃƒO FORA DAS PASTAS DOS CARDS
 SELECT 
   'ARQUIVOS FORA DAS PASTAS:' as status,
   file_path,
@@ -15,9 +15,9 @@ WHERE file_path NOT LIKE '%/%'
    OR file_path LIKE 'card-attachments/%'
 ORDER BY created_at DESC;
 
--- 2. VERIFICAR CARDS SEM TÍTULO
+-- 2. VERIFICAR CARDS SEM TÃTULO
 SELECT 
-  'CARDS SEM TÍTULO:' as status,
+  'CARDS SEM TÃTULO:' as status,
   id,
   title,
   created_at
@@ -27,13 +27,13 @@ WHERE title IS NULL
    OR title = 'Card';
 
 -- 3. ATUALIZAR file_path DOS ARQUIVOS MAL ORGANIZADOS
--- Para arquivos que estão na raiz do bucket
+-- Para arquivos que estÃ£o na raiz do bucket
 UPDATE card_attachments 
 SET file_path = card_title || '/' || file_name
 WHERE file_path NOT LIKE '%/%'
    OR file_path LIKE 'card-attachments/%';
 
--- 4. ATUALIZAR file_path PARA CARDS SEM TÍTULO
+-- 4. ATUALIZAR file_path PARA CARDS SEM TÃTULO
 UPDATE card_attachments 
 SET file_path = 'CARDS_SEM_TITULO/' || file_name,
     card_title = 'CARDS_SEM_TITULO'
@@ -41,9 +41,9 @@ WHERE card_title IS NULL
    OR card_title = ''
    OR card_title = 'Card';
 
--- 5. VERIFICAR RESULTADO DA CORREÇÃO
+-- 5. VERIFICAR RESULTADO DA CORREÃ‡ÃƒO
 SELECT 
-  'RESULTADO APÓS CORREÇÃO:' as status,
+  'RESULTADO APÃ“S CORREÃ‡ÃƒO:' as status,
   file_path,
   file_name,
   card_title,
@@ -52,7 +52,7 @@ FROM card_attachments
 ORDER BY created_at DESC
 LIMIT 20;
 
--- 6. CRIAR FUNÇÃO PARA VALIDAR ESTRUTURA DE PASTAS
+-- 6. CRIAR FUNÃ‡ÃƒO PARA VALIDAR ESTRUTURA DE PASTAS
 CREATE OR REPLACE FUNCTION public.validate_storage_structure()
 RETURNS TABLE (
   issue_type TEXT,
@@ -87,7 +87,7 @@ BEGIN
   
   UNION ALL
   
-  -- Cards sem título
+  -- Cards sem tÃ­tulo
   SELECT 
     'CARD_NO_TITLE'::TEXT,
     ca.file_path,
@@ -101,8 +101,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 7. EXECUTAR VALIDAÇÃO
+-- 7. EXECUTAR VALIDAÃ‡ÃƒO
 SELECT * FROM public.validate_storage_structure();
 
--- 8. COMENTÁRIO FINAL
+-- 8. COMENTÃRIO FINAL
 SELECT 'Storage organization validation complete!' as status;

@@ -1,4 +1,4 @@
--- Script para corrigir a constraint de level na tabela card_comments
+﻿-- Script para corrigir a constraint de level na tabela card_comments
 -- Execute este script no Supabase SQL Editor
 
 -- 1. REMOVER A CONSTRAINT ATUAL
@@ -17,7 +17,7 @@ FROM pg_constraint
 WHERE conrelid = 'public.card_comments'::regclass 
   AND conname = 'card_comments_level_check';
 
--- 4. TESTAR INSERÇÃO COM LEVEL 5 (deve funcionar agora)
+-- 4. TESTAR INSERÃ‡ÃƒO COM LEVEL 5 (deve funcionar agora)
 -- INSERT INTO public.card_comments (
 --   card_id, 
 --   author_id, 
@@ -25,14 +25,14 @@ WHERE conrelid = 'public.card_comments'::regclass
 --   content, 
 --   level
 -- ) VALUES (
---   '00000000-0000-0000-0000-000000000000', -- Substitua por um card_id válido
---   '00000000-0000-0000-0000-000000000000', -- Substitua por um author_id válido
+--   '00000000-0000-0000-0000-000000000000', -- Substitua por um card_id vÃ¡lido
+--   '00000000-0000-0000-0000-000000000000', -- Substitua por um author_id vÃ¡lido
 --   'Teste',
 --   'Teste de level 5',
 --   5
 -- );
 
--- 5. VERIFICAR COMENTÁRIOS EXISTENTES E SEUS LEVELS
+-- 5. VERIFICAR COMENTÃRIOS EXISTENTES E SEUS LEVELS
 SELECT 
   id,
   content,

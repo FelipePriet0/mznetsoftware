@@ -1,5 +1,5 @@
--- =====================================================
--- SCRIPT PARA MELHORAR SISTEMA DE COMENTÁRIOS HIERÁRQUICOS
+﻿-- =====================================================
+-- SCRIPT PARA MELHORAR SISTEMA DE COMENTÃRIOS HIERÃRQUICOS
 -- Conversas Correlacionadas Encadeadas
 -- =====================================================
 
@@ -10,27 +10,27 @@ ADD COLUMN IF NOT EXISTS is_thread_starter BOOLEAN NOT NULL DEFAULT false,
 ADD COLUMN IF NOT EXISTS thread_id UUID,
 ADD COLUMN IF NOT EXISTS reply_count INTEGER NOT NULL DEFAULT 0;
 
--- 2. CRIAR ÍNDICES PARA PERFORMANCE
+-- 2. CRIAR ÃNDICES PARA PERFORMANCE
 CREATE INDEX IF NOT EXISTS idx_card_comments_thread_id ON public.card_comments (thread_id);
 CREATE INDEX IF NOT EXISTS idx_card_comments_level ON public.card_comments (level);
 CREATE INDEX IF NOT EXISTS idx_card_comments_parent_level ON public.card_comments (parent_id, level);
 CREATE INDEX IF NOT EXISTS idx_card_comments_thread_starter ON public.card_comments (is_thread_starter) WHERE is_thread_starter = true;
 
--- 3. FUNÇÃO PARA ATUALIZAR THREAD_ID E REPLY_COUNT
+-- 3. FUNÃ‡ÃƒO PARA ATUALIZAR THREAD_ID E REPLY_COUNT
 CREATE OR REPLACE FUNCTION public.update_comment_hierarchy()
 RETURNS TRIGGER AS $$
 DECLARE
   thread_uuid UUID;
   parent_thread_id UUID;
 BEGIN
-  -- Se é um comentário principal (sem parent_id), criar novo thread
+  -- Se Ã© um comentÃ¡rio principal (sem parent_id), criar novo thread
   IF NEW.parent_id IS NULL THEN
     NEW.thread_id := gen_random_uuid();
     NEW.is_thread_starter := true;
     NEW.level := 0;
     NEW.reply_count := 0;
   ELSE
-    -- Buscar informações do comentário pai
+    -- Buscar informaÃ§Ãµes do comentÃ¡rio pai
     SELECT thread_id, level + 1
     INTO parent_thread_id, NEW.level
     FROM public.card_comments
@@ -40,7 +40,7 @@ BEGIN
     NEW.thread_id := parent_thread_id;
     NEW.is_thread_starter := false;
     
-    -- Limitar a 3 níveis (0, 1, 2)
+    -- Limitar a 3 nÃ­veis (0, 1, 2)
     IF NEW.level > 2 THEN
       NEW.level := 2;
     END IF;
@@ -50,7 +50,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 4. FUNÇÃO PARA ATUALIZAR REPLY_COUNT DO COMENTÁRIO PAI
+-- 4. FUNÃ‡ÃƒO PARA ATUALIZAR REPLY_COUNT DO COMENTÃRIO PAI
 CREATE OR REPLACE FUNCTION public.update_parent_reply_count()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -85,7 +85,7 @@ CREATE TRIGGER trg_update_parent_reply_count
   FOR EACH ROW
   EXECUTE FUNCTION public.update_parent_reply_count();
 
--- 6. FUNÇÃO PARA OBTER COMENTÁRIOS HIERÁRQUICOS ORGANIZADOS
+-- 6. FUNÃ‡ÃƒO PARA OBTER COMENTÃRIOS HIERÃRQUICOS ORGANIZADOS
 CREATE OR REPLACE FUNCTION public.get_hierarchical_comments(card_uuid UUID)
 RETURNS TABLE (
   id UUID,
@@ -123,11 +123,11 @@ BEGIN
   ORDER BY 
     cc.thread_id,           -- Agrupar por thread
     cc.created_at,          -- Ordenar por data dentro do thread
-    cc.level;               -- Nível hierárquico
+    cc.level;               -- NÃ­vel hierÃ¡rquico
 END;
 $$ LANGUAGE plpgsql;
 
--- 7. FUNÇÃO PARA OBTER ESTATÍSTICAS DE CONVERSAS
+-- 7. FUNÃ‡ÃƒO PARA OBTER ESTATÃSTICAS DE CONVERSAS
 CREATE OR REPLACE FUNCTION public.get_conversation_stats(card_uuid UUID)
 RETURNS TABLE (
   total_comments BIGINT,
@@ -160,7 +160,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 8. ATUALIZAR COMENTÁRIOS EXISTENTES COM HIERARQUIA
+-- 8. ATUALIZAR COMENTÃRIOS EXISTENTES COM HIERARQUIA
 UPDATE public.card_comments 
 SET 
   level = 0,
@@ -175,7 +175,7 @@ WITH reply_updates AS (
     cc.id,
     cc.parent_id,
     CASE 
-      WHEN parent.parent_id IS NULL THEN 1  -- Resposta direta ao comentário principal
+      WHEN parent.parent_id IS NULL THEN 1  -- Resposta direta ao comentÃ¡rio principal
       ELSE 2                                -- Sub-resposta
     END as new_level,
     parent.thread_id
@@ -199,17 +199,17 @@ SET reply_count = (
   WHERE replies.parent_id = public.card_comments.id
 );
 
--- 11. CONCEDER PERMISSÕES
+-- 11. CONCEDER PERMISSÃ•ES
 GRANT EXECUTE ON FUNCTION public.get_hierarchical_comments(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_conversation_stats(UUID) TO authenticated;
 
 -- =====================================================
--- VERIFICAÇÃO
+-- VERIFICAÃ‡ÃƒO
 -- =====================================================
 -- Para testar o sistema, execute:
 -- SELECT * FROM public.get_hierarchical_comments('seu-card-id-aqui');
 -- SELECT * FROM public.get_conversation_stats('seu-card-id-aqui');
 
 -- =====================================================
--- SCRIPT CONCLUÍDO
+-- SCRIPT CONCLUÃDO
 -- =====================================================

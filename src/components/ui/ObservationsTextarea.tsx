@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Paperclip } from 'lucide-react';
@@ -26,11 +26,11 @@ export function ObservationsTextarea({
         name={name}
         value={value}
         onChange={onChange}
-        className={`${className} pl-12`} // Adiciona padding à esquerda para o botão
+        className={`${className} pl-12`} // Adiciona padding Ã  esquerda para o botÃ£o
         placeholder={placeholder}
       />
       
-      {/* Botão Anexo integrado dentro do textarea */}
+      {/* BotÃ£o Anexo integrado dentro do textarea */}
       {onAttachmentClick && (
         <Button
           type="button"

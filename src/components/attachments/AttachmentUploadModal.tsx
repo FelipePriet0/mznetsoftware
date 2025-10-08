@@ -133,6 +133,10 @@ export function AttachmentUploadModal({
         fileInputRef.current.value = '';
       }
       
+      // ⚠️ IMPORTANTE: Aguardar um pouco para garantir que o upload foi processado
+      // antes de fechar o modal, para que o estado seja atualizado corretamente
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       // Fechar modal após upload bem-sucedido
       onClose();
     } catch (error) {

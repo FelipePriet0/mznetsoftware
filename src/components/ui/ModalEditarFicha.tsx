@@ -93,12 +93,16 @@ export default function ModalEditarFicha({ card, onClose, onSave, onDesingressar
 
   const handleUploadAttachment = async (data: any) => {
     try {
+      console.log('📎 [ModalEditarFicha] Iniciando upload de anexo...');
       await uploadAttachment(data);
+      console.log('📎 [ModalEditarFicha] Upload concluído, recarregando anexos...');
       await loadAttachments();
+      console.log('📎 [ModalEditarFicha] Anexos recarregados, chamando onRefetch...');
       // Recarregar a página para mostrar o comentário automático
       if (onRefetch) {
         onRefetch();
       }
+      console.log('📎 [ModalEditarFicha] Processo de upload completo!');
     } catch (error) {
       console.error('Error uploading attachment:', error);
     }
@@ -122,8 +126,19 @@ export default function ModalEditarFicha({ card, onClose, onSave, onDesingressar
 
   const handleDeleteAttachment = async (attachmentId: string) => {
     try {
-      await deleteAttachment(attachmentId);
-      await loadAttachments();
+      console.log('🗑️ [ModalEditarFicha] Iniciando exclusão de anexo:', attachmentId);
+      const success = await deleteAttachment(attachmentId);
+      console.log('🗑️ [ModalEditarFicha] Exclusão resultado:', success);
+      if (success) {
+        console.log('🗑️ [ModalEditarFicha] Recarregando anexos...');
+        await loadAttachments();
+        console.log('🗑️ [ModalEditarFicha] Anexos recarregados com sucesso');
+        // Recarregar comentários também
+        if (onRefetch) {
+          console.log('🗑️ [ModalEditarFicha] Chamando onRefetch...');
+          onRefetch();
+        }
+      }
     } catch (error) {
       console.error('Error deleting attachment:', error);
     }
@@ -169,7 +184,7 @@ export default function ModalEditarFicha({ card, onClose, onSave, onDesingressar
         // Try kanban_cards first
         const { data: kc } = await (supabase as any)
           .from('kanban_cards')
-          .select('reanalysis_notes, comments, comments_short')
+          .select('reanalysis_notes')
           .eq('id', card.id)
           .maybeSingle();
         let list: any[] = [];
@@ -180,21 +195,6 @@ export default function ModalEditarFicha({ card, onClose, onSave, onDesingressar
           } else if (typeof notes === 'string') {
             try { list = JSON.parse(notes) || []; } catch {}
           }
-        }
-        // As last resort, use comments/comments_short como um parecer único
-        const fallbackText = (kc as any)?.comments || (kc as any)?.comments_short;
-        if ((!list || list.length === 0) && fallbackText) {
-          list = [{ 
-            id: 'legacy', 
-            author_name: 'Sistema', 
-            created_at: new Date().toISOString(), 
-            text: fallbackText, 
-            author_role: '—',
-            parent_id: null,
-            level: 0,
-            thread_id: crypto.randomUUID(),
-            is_thread_starter: true
-          }];
         }
         // Migrar pareceres antigos que não têm estrutura hierárquica
         const migratedList = (Array.isArray(list) ? list : []).map(parecer => {
@@ -257,7 +257,7 @@ export default function ModalEditarFicha({ card, onClose, onSave, onDesingressar
     try {
       const { error } = await (supabase as any)
         .from('kanban_cards')
-        .update({ reanalysis_notes: serialized, comments: text, comments_short: text })
+        .update({ reanalysis_notes: serialized })
         .eq('id', card.id);
       if (error) throw error;
       toast({ title: 'Parecer adicionado', description: 'Seu parecer foi salvo na ficha.' });
@@ -400,7 +400,7 @@ export default function ModalEditarFicha({ card, onClose, onSave, onDesingressar
     setEditingText("");
     try {
       const serialized = JSON.stringify(updated);
-      const { error } = await (supabase as any).from('kanban_cards').update({ reanalysis_notes: serialized, comments: text, comments_short: text }).eq('id', card.id);
+      const { error } = await (supabase as any).from('kanban_cards').update({ reanalysis_notes: serialized }).eq('id', card.id);
       if (error) throw error;
       toast({ title: 'Parecer atualizado', description: 'Alteração aplicada com sucesso.' });
     } catch (e: any) {

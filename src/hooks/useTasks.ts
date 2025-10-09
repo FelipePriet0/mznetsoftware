@@ -178,13 +178,30 @@ export function useTasks(userId?: string, cardId?: string) {
       );
 
       // 2. Salvar no banco de dados (sem bloquear a UI)
-      const { error: updateError } = await (supabase as any)
+      console.log('📤 [useTasks] Enviando UPDATE para Supabase:', { taskId, updateData });
+      
+      const { data: updateResult, error: updateError } = await (supabase as any)
         .from('card_tasks')
         .update(updateData)
-        .eq('id', taskId);
+        .eq('id', taskId)
+        .select();
+
+      console.log('📥 [useTasks] Resposta do Supabase:', { 
+        success: !updateError, 
+        error: updateError,
+        result: updateResult,
+        errorDetails: updateError ? {
+          message: updateError.message,
+          code: updateError.code,
+          details: updateError.details,
+          hint: updateError.hint
+        } : null
+      });
 
       if (updateError) {
         console.error('❌ [useTasks] Erro ao atualizar status, revertendo...');
+        console.error('❌ [useTasks] Detalhes completos do erro:', JSON.stringify(updateError, null, 2));
+        
         // Reverter mudança otimista em caso de erro
         await loadTasks();
         
@@ -192,10 +209,17 @@ export function useTasks(userId?: string, cardId?: string) {
           console.warn('Card tasks table not found - feature may not be available yet');
           return false;
         }
+        
+        // Verificar se é erro de RLS
+        if (updateError.code === '42501' || updateError.message?.includes('policy') || updateError.message?.includes('permission')) {
+          console.error('🚨 [useTasks] ERRO DE RLS/PERMISSÃO! Execute fix_card_tasks_rls.sql no Supabase');
+        }
+        
         throw updateError;
       }
 
       console.log('✅ [useTasks] Status atualizado no banco com sucesso');
+      console.log('✅ [useTasks] Linhas afetadas:', updateResult?.length || 0);
       return true;
     } catch (err: any) {
       console.error('❌ [useTasks] Erro ao atualizar status da tarefa:', err);

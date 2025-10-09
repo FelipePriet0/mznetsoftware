@@ -601,7 +601,7 @@ useEffect(() => {
       // Loading reanalysts disabled on lean backend (no reanalista role)
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, avatar_url, company_id")
+        .select("id, full_name, avatar_url")
         .limit(0);
 
       if (error) throw error;

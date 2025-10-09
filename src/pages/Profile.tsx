@@ -54,24 +54,9 @@ export default function Profile() {
   }, [user?.id]);
 
   useEffect(() => {
-    // Busca nome da empresa
-    (async () => {
-      if (!profile?.company_id) {
-        setCompanyName("-");
-        return;
-      }
-      const { data, error } = await supabase
-        .from("companies")
-        .select("name")
-        .eq("id", profile.company_id)
-        .maybeSingle();
-      if (!error && data?.name) {
-        setCompanyName(data.name);
-      } else {
-        setCompanyName("-");
-      }
-    })();
-  }, [profile?.company_id]);
+    // Empresa não é mais exibida por ausência do relacionamento no schema atual
+    setCompanyName("-");
+  }, [profile?.full_name]);
 
   const roleLabel = useMemo(() => {
     if (role === "analista") return "Analista";

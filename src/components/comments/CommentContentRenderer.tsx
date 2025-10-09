@@ -8,6 +8,7 @@ import { User, Calendar, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Task } from '@/types/tasks';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CommentContentRendererProps {
   content: string;
@@ -75,11 +76,54 @@ export function CommentContentRenderer({
   if (taskMatch) {
     const [, assignedToFromComment, descriptionFromComment, deadlineFromComment] = taskMatch;
     
-    // Encontrar a tarefa relacionada
-    const relatedTask = tasks.find(task => 
-      task.comment_id === commentId || 
-      (task.card_id === cardId && task.description === descriptionFromComment.trim())
-    );
+    console.log('🔍 [CommentContentRenderer] ===== DEBUG TAREFA =====');
+    console.log('🔍 [CommentContentRenderer] Procurando tarefa para comentário:', {
+      commentId,
+      cardId,
+      assignedToFromComment,
+      descriptionFromComment: descriptionFromComment.trim(),
+      deadlineFromComment,
+      totalTasks: tasks.length,
+      allTasksData: tasks.map(t => ({
+        id: t.id,
+        comment_id: t.comment_id,
+        description: t.description,
+        status: t.status,
+        card_id: t.card_id
+      }))
+    });
+    
+    // Encontrar a tarefa relacionada com MÚLTIPLOS critérios de fallback
+    let relatedTask = tasks.find(task => task.comment_id === commentId);
+    
+    console.log('🔍 [CommentContentRenderer] Busca 1 (por comment_id):', relatedTask ? 'ENCONTRADA' : 'NÃO ENCONTRADA');
+    
+    // Fallback 1: Buscar por descrição exata no mesmo card
+    if (!relatedTask) {
+      relatedTask = tasks.find(task => 
+        task.card_id === cardId && 
+        task.description.trim() === descriptionFromComment.trim()
+      );
+      console.log('🔍 [CommentContentRenderer] Busca 2 (por descrição):', relatedTask ? 'ENCONTRADA' : 'NÃO ENCONTRADA');
+    }
+    
+    // Fallback 2: Buscar por descrição parcial (primeiras 50 chars)
+    if (!relatedTask) {
+      const descShort = descriptionFromComment.trim().substring(0, 50);
+      relatedTask = tasks.find(task => 
+        task.card_id === cardId && 
+        task.description.trim().startsWith(descShort)
+      );
+      console.log('🔍 [CommentContentRenderer] Busca 3 (por descrição parcial):', relatedTask ? 'ENCONTRADA' : 'NÃO ENCONTRADA');
+    }
+    
+    console.log('🔍 [CommentContentRenderer] Tarefa final encontrada:', relatedTask ? {
+      id: relatedTask.id,
+      comment_id: relatedTask.comment_id,
+      description: relatedTask.description,
+      status: relatedTask.status
+    } : 'NENHUMA TAREFA ENCONTRADA');
+    console.log('🔍 [CommentContentRenderer] ===========================');
     
     // Usar dados atualizados da tarefa do banco, ou fallback para dados do comentário
     const assignedTo = relatedTask?.assigned_to_name || assignedToFromComment;
@@ -105,12 +149,71 @@ export function CommentContentRenderer({
     });
     
     const handleToggleTask = async () => {
-      if (!relatedTask || isUpdating || !onUpdateTaskStatus) return;
+      if (isUpdating || !onUpdateTaskStatus) return;
+      
+      console.log('🔘 [handleToggleTask] Iniciando toggle da tarefa:', {
+        hasRelatedTask: !!relatedTask,
+        relatedTaskId: relatedTask?.id,
+        commentId,
+        cardId,
+        description: descriptionFromComment
+      });
       
       setIsUpdating(true);
       try {
         const newStatus = isCompleted ? 'pending' : 'completed';
-        await onUpdateTaskStatus(relatedTask.id, newStatus);
+        let taskId = relatedTask?.id;
+        
+        // Se não tem relatedTask, buscar tarefa pelo comment_id ou descrição
+        if (!taskId && (commentId || cardId)) {
+          console.log('🔍 [handleToggleTask] Tarefa não encontrada no cache, buscando no banco...');
+          
+          // Tentar buscar por comment_id
+          if (commentId) {
+            const { data: foundByComment } = await (supabase as any)
+              .from('card_tasks')
+              .select('id, status')
+              .eq('comment_id', commentId)
+              .eq('card_id', cardId)
+              .is('deleted_at', null)
+              .single();
+            
+            if (foundByComment?.id) {
+              console.log('✅ [handleToggleTask] Tarefa encontrada por comment_id:', foundByComment.id);
+              taskId = foundByComment.id;
+            }
+          }
+          
+          // Se ainda não achou, buscar por descrição + card_id
+          if (!taskId && descriptionFromComment && cardId) {
+            console.log('🔍 [handleToggleTask] Buscando por descrição...');
+            const { data: foundByDescription } = await (supabase as any)
+              .from('card_tasks')
+              .select('id, status')
+              .eq('card_id', cardId)
+              .eq('description', descriptionFromComment.trim())
+              .is('deleted_at', null)
+              .single();
+            
+            if (foundByDescription?.id) {
+              console.log('✅ [handleToggleTask] Tarefa encontrada por descrição:', foundByDescription.id);
+              taskId = foundByDescription.id;
+            }
+          }
+        }
+        
+        if (!taskId) {
+          console.error('❌ [handleToggleTask] Nenhuma tarefa encontrada para atualizar');
+          toast({
+            title: 'Tarefa não encontrada',
+            description: 'Não foi possível localizar a tarefa no banco de dados.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        console.log('📤 [handleToggleTask] Atualizando tarefa:', { taskId, newStatus });
+        await onUpdateTaskStatus(taskId, newStatus);
         
         toast({
           title: newStatus === 'completed' ? 'Tarefa concluída!' : 'Tarefa reaberta',
@@ -118,8 +221,10 @@ export function CommentContentRenderer({
             ? 'A tarefa foi marcada como concluída.' 
             : 'A tarefa foi reaberta.',
         });
+        
+        console.log('✅ [handleToggleTask] Tarefa atualizada com sucesso');
       } catch (error) {
-        console.error('Erro ao processar tarefa:', error);
+        console.error('❌ [handleToggleTask] Erro ao processar tarefa:', error);
         toast({
           title: 'Erro ao processar tarefa',
           description: 'Não foi possível processar a tarefa.',
@@ -142,8 +247,9 @@ export function CommentContentRenderer({
             <Checkbox
               checked={isCompleted}
               onCheckedChange={handleToggleTask}
-              disabled={isUpdating || !relatedTask}
+              disabled={isUpdating}
               className="w-6 h-6 border-2 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+              title={relatedTask ? 'Marcar tarefa' : 'Tarefa será buscada no banco ao clicar'}
             />
           </div>
           
@@ -224,7 +330,7 @@ export function CommentContentRenderer({
   // Se há anexos vindos do banco de dados E o comentário menciona anexo,
   // PRIORIZAR os anexos do banco (têm o file_path correto baseado no ID!)
   const hasAttachmentsFromDB = attachments && attachments.length > 0;
-  const isAttachmentComment = content.includes('📎') || /Anexo adicionado:/i.test(content) || /Arquivo anexado:/i.test(content);
+  // isAttachmentComment já foi declarado no início da função (linha 62)
   
   console.log('🔍 CommentContentRenderer DEBUG:', {
     content: content?.substring(0, 100) + '...',
